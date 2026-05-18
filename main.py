@@ -27,6 +27,7 @@ app.add_middleware(
 )
 
 app.mount("/Fotos", StaticFiles(directory=BASE_DIR / "Fotos"), name="Fotos")
+app.mount("/icons", StaticFiles(directory=BASE_DIR / "icons"), name="icons")
 
 
 class ProductBase(BaseModel):
@@ -209,7 +210,14 @@ def index_page():
 
 @app.get("/{asset_name}", include_in_schema=False)
 def root_asset(asset_name: str):
-    allowed_assets = {"styles.css", "script.js", "dashboard.js"}
+    allowed_assets = {
+        "styles.css",
+        "script.js",
+        "dashboard.js",
+        "sw.js",
+        "manifest.webmanifest",
+        "offline.html",
+    }
     if asset_name not in allowed_assets:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
 

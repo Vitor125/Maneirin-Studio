@@ -1,0 +1,48 @@
+{
+    "id": "/",
+    "name": "Maneirin Studio",
+    "short_name": "Maneirin",
+    "description": "Agenda, produtos e contato do Maneirin Studio.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#111827",
+    "theme_color": "#111827",
+    "categories": ["business", "lifestyle"],
+    "lang": "pt-BR",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Agenda",
+            "short_name": "Agenda",
+            "url": "/agenda/",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Produtos",
+            "short_name": "Produtos",
+            "url": "/produtos/",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Área do Barbeiro",
+            "short_name": "Barbeiro",
+            "url": "/barbeiro/",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        }
+    ]
+}

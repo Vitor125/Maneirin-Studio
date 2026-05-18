@@ -113,6 +113,47 @@ function setupWhatsappLinks() {
     });
 }
 
+function setupInstallAppPrompt() {
+    let installPromptEvent = null;
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.className = 'install-app-button';
+    button.innerHTML = '<i class="fas fa-mobile-alt"></i> Instalar App';
+    button.hidden = true;
+    document.body.appendChild(button);
+
+    window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        installPromptEvent = event;
+        button.hidden = false;
+    });
+
+    button.addEventListener('click', async () => {
+        if (!installPromptEvent) return;
+
+        installPromptEvent.prompt();
+        await installPromptEvent.userChoice;
+        installPromptEvent = null;
+        button.hidden = true;
+    });
+
+    window.addEventListener('appinstalled', () => {
+        installPromptEvent = null;
+        button.hidden = true;
+    });
+}
+
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(error => {
+            console.error('Erro ao registrar service worker:', error);
+        });
+    });
+}
+
 function productCardTemplate(product) {
     const name = escapeHtml(product.name);
     const description = escapeHtml(product.description || '');
@@ -254,7 +295,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMobileMenu();
     setupScrollHeader();
     setupWhatsappLinks();
+    setupInstallAppPrompt();
     setupAnimations();
     fetchProducts();
     fetchSchedules();
+    registerServiceWorker();
 });
