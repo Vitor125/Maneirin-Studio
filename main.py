@@ -177,6 +177,21 @@ def products_index_page():
     return FileResponse(BASE_DIR / "produtos" / "index.html")
 
 
+@app.get("/barbeiro", include_in_schema=False)
+def barber_redirect():
+    return RedirectResponse(url="/barbeiro/")
+
+
+@app.get("/barbeiro/", include_in_schema=False)
+def barber_area():
+    return RedirectResponse(url="/dashboard.html")
+
+
+@app.get("/barbeiro/index.html", include_in_schema=False)
+def barber_index_page():
+    return FileResponse(BASE_DIR / "barbeiro" / "index.html")
+
+
 @app.get("/dashboard", include_in_schema=False)
 def dashboard_redirect():
     return RedirectResponse(url="/dashboard.html")
