@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Maneirin Studio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .dashboard-container {
+            padding: 120px 5% 50px;
+            min-height: 100vh;
+        }
+        .dash-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        .dash-card {
+            background-color: var(--surface-color);
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            font-family: var(--font-body);
+        }
+        .dash-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .list-item {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .dash-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <a href="index.html" class="logo">
+                <img src="Fotos/logo.png" alt="Maneirin Studio Logo" style="height: 50px; width: auto;" onerror="this.src='https://via.placeholder.com/150x50?text=Maneirin+Studio'">
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html">Voltar ao Site</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="dashboard-container container">
+        <h2>Painel do Barbeiro</h2>
+        
+        <div class="dash-grid">
+            <!-- Adicionar Produtos -->
+            <div class="dash-card">
+                <h3><i class="fas fa-box"></i> Cadastrar Produto Afiliado</h3>
+                <br>
+                <form id="productForm">
+                    <div class="form-group">
+                        <label>Nome do Produto</label>
+                        <input type="text" id="prodName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição Curta</label>
+                        <textarea id="prodDesc" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>URL da Imagem (Ex: link da amazon)</label>
+                        <input type="url" id="prodImage" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Seu Link de Afiliado</label>
+                        <input type="url" id="prodLink" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%">Salvar Produto</button>
+                </form>
+                
+                <div class="dash-list" id="dashboardProductsList">
+                    <!-- Produtos salvos aparecerão aqui -->
+                </div>
+            </div>
+
+            <!-- Adicionar Horários -->
+            <div class="dash-card">
+                <h3><i class="fas fa-calendar-alt"></i> Disponibilizar Horário</h3>
+                <br>
+                <form id="scheduleForm">
+                    <div class="form-group">
+                        <label>Nome do Barbeiro</label>
+                        <input type="text" id="schedBarber" value="Nicolas" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Data</label>
+                        <input type="date" id="schedDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Horário</label>
+                        <input type="time" id="schedTime" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%">Adicionar Horário</button>
+                </form>
+
+                <div class="dash-list" id="dashboardSchedulesList">
+                    <!-- Horários salvos aparecerão aqui -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

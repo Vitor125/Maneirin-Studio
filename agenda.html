@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda - Maneirin Studio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .agenda-container {
+            padding: 150px 5% 100px;
+            min-height: 100vh;
+            background: var(--bg-color);
+        }
+        .date-group {
+            margin-bottom: 40px;
+        }
+        .date-title {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .slot-card {
+            background-color: var(--surface-color);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: var(--transition);
+        }
+        .slot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border-color: var(--accent-color);
+        }
+        .slot-time {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: white;
+        }
+        .slot-barber {
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        .no-slots {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            padding: 50px 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <a href="index.html" class="logo">
+                <img src="Fotos/logo.png" alt="Maneirin Studio Logo" style="height: 50px; width: auto;" onerror="this.src='https://via.placeholder.com/150x50?text=Maneirin+Studio'">
+            </a>
+            <div class="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html#inicio">Início</a></li>
+                <li><a href="index.html#sobre">Sobre Nós</a></li>
+                <li><a href="index.html#produtos">Recomendações</a></li>
+                <li><a href="agenda.html">Agenda</a></li>
+                <li><a href="index.html#contato">Contato</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="agenda-container container">
+        <h2>Horários Disponíveis</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 50px;">Selecione o melhor horário para o seu atendimento premium.</p>
+        
+        <div id="agendaList">
+            <!-- Horários carregados via JS aparecerão aqui -->
+            <div class="no-slots"><i class="fas fa-spinner fa-spin"></i> Carregando horários...</div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Maneirin Studio. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Lógica específica da agenda
+        document.addEventListener('DOMContentLoaded', fetchSchedules);
+    </script>
+</body>
+</html>
