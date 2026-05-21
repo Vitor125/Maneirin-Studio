@@ -1,4 +1,4 @@
-const API_URL = window.MANEIRIN_API_URL || 'http://127.0.0.1:8000/api';
+const API_URL = window.MANEIRIN_API_URL || '/api';
 const WHATSAPP_PHONE = '5521980453636';
 
 function escapeHtml(value = '') {
