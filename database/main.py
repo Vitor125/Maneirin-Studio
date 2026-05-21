@@ -9,10 +9,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-import models
-from database import engine, get_db
+import database.models as models
+from database.database import engine, get_db
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 models.Base.metadata.create_all(bind=engine)
 

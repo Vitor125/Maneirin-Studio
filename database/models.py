@@ -1,6 +1,6 @@
 # pyrefly: ignore [missing-import]
 from sqlalchemy import Boolean, Column, Date, Integer, String, Text, Time
-from database import Base
+from database.database import Base
 
 
 class Product(Base):

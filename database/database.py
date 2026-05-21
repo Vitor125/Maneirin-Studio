@@ -4,8 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import os
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-
+DEFAULT_DATABASE_URL = "sqlite:///./sql_app.db"
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
