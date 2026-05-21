@@ -21,3 +21,8 @@ class Schedule(Base):
     date = Column(Date, index=True, nullable=False)
     time = Column(Time, nullable=False)
     is_available = Column(Boolean, default=True, nullable=False)
+
+    # Campos do cliente (preenchidos quando um cliente reserva o horário)
+    client_uid = Column(String, nullable=True)
+    client_name = Column(String, nullable=True)
+    client_email = Column(String, nullable=True)

@@ -13,85 +13,122 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <header class="header">
-        <nav class="navbar">
-            <a href="index.html" class="logo" aria-label="Maneirin Studio">
-                <img src="Fotos/Logo.png" alt="Maneirin Studio" style="height: 50px; width: auto;">
-            </a>
-            <button class="hamburger" type="button" aria-label="Abrir menu">
-                <i class="fas fa-bars"></i>
-            </button>
-            <ul class="nav-links">
-                <li><a href="index.html">Site</a></li>
-                <li><a href="produtos/">Produtos</a></li>
-                <li><a href="agenda/">Agenda</a></li>
-            </ul>
-        </nav>
-    </header>
 
-    <main class="dashboard-container container">
-        <div class="dashboard-heading">
-            <h1>Painel do Barbeiro</h1>
-            <p>Gerencie horários disponíveis e recomendações afiliadas.</p>
+    <!-- ── Tela de Login ───────────────────────────────────────────────────── -->
+    <div id="loginScreen" class="auth-screen">
+        <div class="auth-card">
+            <img src="Fotos/Logo.png" alt="Maneirin Studio" class="auth-logo">
+            <h1>Área do Barbeiro</h1>
+            <p class="auth-subtitle">Faça login para acessar o painel</p>
+
+            <div id="loginError" class="auth-error" hidden></div>
+
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">E-mail</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn" style="width:100%">
+                    <span id="loginBtnText">Entrar</span>
+                    <i id="loginSpinner" class="fas fa-spinner fa-spin" hidden></i>
+                </button>
+            </form>
         </div>
+    </div>
 
-        <div class="dashboard-status" id="dashboardStatus" role="status" aria-live="polite"></div>
+    <!-- ── Painel (oculto até login) ─────────────────────────────────────── -->
+    <div id="dashboardScreen" hidden>
+        <header class="header">
+            <nav class="navbar">
+                <a href="index.html" class="logo" aria-label="Maneirin Studio">
+                    <img src="Fotos/Logo.png" alt="Maneirin Studio" style="height: 50px; width: auto;">
+                </a>
+                <button class="hamburger" type="button" aria-label="Abrir menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <ul class="nav-links">
+                    <li><a href="index.html">Site</a></li>
+                    <li><a href="produtos/">Produtos</a></li>
+                    <li><a href="agenda/">Agenda</a></li>
+                    <li>
+                        <button id="logoutBtn" class="btn-logout" type="button">
+                            <i class="fas fa-sign-out-alt"></i> Sair
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </header>
 
-        <div class="dash-grid">
-            <section class="dash-card">
-                <h2><i class="fas fa-calendar-alt"></i> Disponibilidade</h2>
-                <form id="scheduleForm" class="dashboard-form">
-                    <div class="form-group">
-                        <label for="schedBarber">Barbeiro disponível</label>
-                        <input type="text" id="schedBarber" value="Nicolas" required>
-                    </div>
-                    <div class="form-row">
+        <main class="dashboard-container container">
+            <div class="dashboard-heading">
+                <h1>Painel do Barbeiro</h1>
+                <p>Gerencie horários disponíveis e recomendações afiliadas.</p>
+            </div>
+
+            <div class="dashboard-status" id="dashboardStatus" role="status" aria-live="polite"></div>
+
+            <div class="dash-grid">
+                <section class="dash-card">
+                    <h2><i class="fas fa-calendar-alt"></i> Disponibilidade</h2>
+                    <form id="scheduleForm" class="dashboard-form">
                         <div class="form-group">
-                            <label for="schedDate">Data</label>
-                            <input type="date" id="schedDate" required>
+                            <label for="schedBarber">Barbeiro disponível</label>
+                            <input type="text" id="schedBarber" value="Nicolas" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="schedDate">Data</label>
+                                <input type="date" id="schedDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="schedTime">Horário</label>
+                                <input type="time" id="schedTime" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Adicionar Horário</button>
+                    </form>
+
+                    <div class="dash-list" id="dashboardSchedulesList" aria-live="polite"></div>
+                </section>
+
+                <section class="dash-card">
+                    <h2><i class="fas fa-box"></i> Produto Afiliado</h2>
+                    <form id="productForm" class="dashboard-form">
+                        <div class="form-group">
+                            <label for="prodName">Nome do produto</label>
+                            <input type="text" id="prodName" required>
                         </div>
                         <div class="form-group">
-                            <label for="schedTime">Horário</label>
-                            <input type="time" id="schedTime" required>
+                            <label for="prodLink">Link de afiliado</label>
+                            <input type="url" id="prodLink" placeholder="https://..." required>
                         </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Adicionar Horário</button>
-                </form>
+                        <div class="form-group">
+                            <label for="prodImageFile">Foto do produto</label>
+                            <input type="file" id="prodImageFile" accept="image/*">
+                        </div>
+                        <div class="form-group">
+                            <label for="prodImageUrl">Link da foto</label>
+                            <input type="url" id="prodImageUrl" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label for="prodDesc">Descrição curta</label>
+                            <textarea id="prodDesc" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salvar Produto</button>
+                    </form>
 
-                <div class="dash-list" id="dashboardSchedulesList" aria-live="polite"></div>
-            </section>
+                    <div class="dash-list" id="dashboardProductsList" aria-live="polite"></div>
+                </section>
+            </div>
+        </main>
+    </div>
 
-            <section class="dash-card">
-                <h2><i class="fas fa-box"></i> Produto Afiliado</h2>
-                <form id="productForm" class="dashboard-form">
-                    <div class="form-group">
-                        <label for="prodName">Nome do produto</label>
-                        <input type="text" id="prodName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="prodLink">Link de afiliado</label>
-                        <input type="url" id="prodLink" placeholder="https://..." required>
-                    </div>
-                    <div class="form-group">
-                        <label for="prodImageFile">Foto do produto</label>
-                        <input type="file" id="prodImageFile" accept="image/*">
-                    </div>
-                    <div class="form-group">
-                        <label for="prodImageUrl">Link da foto</label>
-                        <input type="url" id="prodImageUrl" placeholder="https://...">
-                    </div>
-                    <div class="form-group">
-                        <label for="prodDesc">Descrição curta</label>
-                        <textarea id="prodDesc" rows="3"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Salvar Produto</button>
-                </form>
-
-                <div class="dash-list" id="dashboardProductsList" aria-live="polite"></div>
-            </section>
-        </div>
-    </main>
-
+    <!-- Firebase SDKs -->
+    <script type="module" src="client.js"></script>
     <script src="script.js"></script>
     <script src="dashboard.js"></script>
 </body>

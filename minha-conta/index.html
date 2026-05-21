@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111827">
+    <title>Minha Conta - Maneirin Studio</title>
+    <meta name="description" content="Área do cliente Maneirin Studio. Veja seus agendamentos e produtos recomendados.">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- ── Tela de Login ─────────────────────────────────────────────────── -->
+    <div id="loginScreen" class="auth-screen">
+        <div class="auth-card">
+            <img src="../Fotos/Logo.png" alt="Maneirin Studio" class="auth-logo">
+            <h1>Minha Conta</h1>
+            <p class="auth-subtitle">Faça login para ver seus agendamentos</p>
+
+            <div id="loginError" class="auth-error" hidden></div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin" type="button">Entrar</button>
+                <button class="auth-tab" id="tabRegister" type="button">Criar Conta</button>
+            </div>
+
+            <!-- Login -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">E-mail</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn" style="width:100%">
+                    <span id="loginBtnText">Entrar</span>
+                    <i id="loginSpinner" class="fas fa-spinner fa-spin" hidden></i>
+                </button>
+            </form>
+
+            <!-- Registro -->
+            <form id="registerForm" class="auth-form" hidden>
+                <div class="form-group">
+                    <label for="registerName">Seu nome</label>
+                    <input type="text" id="registerName" placeholder="João Silva" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">E-mail</label>
+                    <input type="email" id="registerEmail" placeholder="seu@email.com" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Senha (mínimo 6 caracteres)</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary" id="registerBtn" style="width:100%">
+                    <span id="registerBtnText">Criar Conta</span>
+                    <i id="registerSpinner" class="fas fa-spinner fa-spin" hidden></i>
+                </button>
+            </form>
+
+            <div class="auth-divider"><span>ou</span></div>
+
+            <button id="googleLoginBtn" class="btn-google" type="button">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                Continuar com Google
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Área do Cliente (oculta até login) ────────────────────────────── -->
+    <div id="clientScreen" hidden>
+        <header class="header">
+            <nav class="navbar">
+                <a href="../index.html" class="logo" aria-label="Maneirin Studio">
+                    <img src="../Fotos/Logo.png" alt="Maneirin Studio" style="height: 50px; width: auto;">
+                </a>
+                <button class="hamburger" type="button" aria-label="Abrir menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <ul class="nav-links">
+                    <li><a href="../index.html">Início</a></li>
+                    <li><a href="../agenda/">Agenda</a></li>
+                    <li><a href="../produtos/">Produtos</a></li>
+                    <li>
+                        <button id="logoutBtn" class="btn-logout" type="button">
+                            <i class="fas fa-sign-out-alt"></i> Sair
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+
+        <main class="client-area">
+            <!-- Hero da área do cliente -->
+            <section class="client-hero">
+                <div class="container">
+                    <div class="client-welcome">
+                        <div class="client-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <h1>Olá, <span id="clientName">Cliente</span>! 👋</h1>
+                            <p id="clientEmail" class="client-email-display"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Meus Agendamentos -->
+            <section class="client-section">
+                <div class="container">
+                    <h2><i class="fas fa-calendar-check"></i> Meus Agendamentos</h2>
+                    <div id="myAppointmentsList" class="appointments-list" aria-live="polite">
+                        <div class="no-slots">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando...
+                        </div>
+                    </div>
+                    <div class="client-cta">
+                        <a href="../agenda/" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Agendar Novo Horário
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Produtos Recomendados -->
+            <section class="client-section client-section-alt">
+                <div class="container">
+                    <h2><i class="fas fa-star"></i> Recomendações para Você</h2>
+                    <p class="section-desc">Produtos selecionados pelo Maneirin Studio para manter seu estilo em casa.</p>
+                    <div class="products-grid" data-products-list aria-live="polite">
+                        <p class="loading-message">Carregando produtos...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Maneirin Studio. Todos os direitos reservados.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="../client.js"></script>
+    <script src="../script.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
