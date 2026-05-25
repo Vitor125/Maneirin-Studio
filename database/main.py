@@ -7,10 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 import database.models as models
-from database.database import engine, get_db
+from database.database import database_public_info, engine, get_db
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -67,8 +68,20 @@ class Schedule(ScheduleBase):
 
 
 @app.get("/api/health")
-def health_check():
-    return {"status": "ok"}
+def health_check(db: Session = Depends(get_db)):
+    db.execute(text("select 1"))
+    return {"status": "ok", "database": database_public_info()}
+
+
+@app.get("/api/db-status")
+def database_status(db: Session = Depends(get_db)):
+    db.execute(text("select 1"))
+    return {
+        "status": "ok",
+        "database": database_public_info(),
+        "products_count": db.query(models.Product).count(),
+        "schedules_count": db.query(models.Schedule).count(),
+    }
 
 
 @app.get("/api/products", response_model=List[Product])
