@@ -14,6 +14,42 @@ function setDashboardStatus(message, type = 'success') {
     }, 5000);
 }
 
+function setDatabaseStatus(message, type = 'success') {
+    const status = document.getElementById('databaseStatus');
+    if (!status) return;
+
+    status.textContent = message;
+    status.className = `database-status ${type}`;
+}
+
+async function loadDatabaseStatus() {
+    try {
+        const response = await fetch(`${API_URL}/db-status`);
+        if (!response.ok) throw new Error('Erro ao consultar banco');
+
+        const data = await response.json();
+        const database = data.database || {};
+        const source = database.source || 'desconhecida';
+        const dialect = database.dialect || 'desconhecido';
+
+        if (database.is_local_sqlite) {
+            setDatabaseStatus(
+                `Atenção: o backend está usando SQLite local (${source}). Na Railway, configure DATABASE_URL para salvar no PostgreSQL.`,
+                'error'
+            );
+            return;
+        }
+
+        setDatabaseStatus(
+            `Banco conectado: ${dialect} via ${source}. Produtos: ${data.products_count}. Horários: ${data.schedules_count}.`,
+            'success'
+        );
+    } catch (error) {
+        console.error(error);
+        setDatabaseStatus('Não foi possível confirmar a conexão com o banco.', 'error');
+    }
+}
+
 function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -207,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (productForm) productForm.addEventListener('submit', submitProduct);
     if (scheduleForm) scheduleForm.addEventListener('submit', submitSchedule);
 
+    loadDatabaseStatus();
     loadDashboardProducts();
     loadDashboardSchedules();
 });
