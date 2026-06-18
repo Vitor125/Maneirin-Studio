@@ -1,5 +1,6 @@
 import { collection, addDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-import { db, escapeHtml, formatDateBR, formatTime, safeExternalUrl } from './script.js';
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { db, auth, escapeHtml, formatDateBR, formatTime, safeExternalUrl } from './script.js';
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 
@@ -201,13 +202,60 @@ async function loadDashboardSchedules() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('loginForm');
+    const loginOverlay = document.getElementById('loginOverlay');
+    const mainDashboard = document.getElementById('mainDashboard');
+    const logoutBtn = document.getElementById('logoutBtn');
+
     const productForm = document.getElementById('productForm');
     const scheduleForm = document.getElementById('scheduleForm');
 
     if (productForm) productForm.addEventListener('submit', submitProduct);
     if (scheduleForm) scheduleForm.addEventListener('submit', submitSchedule);
 
-    loadDatabaseStatus();
-    loadDashboardProducts();
-    loadDashboardSchedules();
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.style.display = 'none';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error(error);
+                errorDiv.textContent = 'Erro ao fazer login. Credenciais incorretas.';
+                errorDiv.style.display = 'block';
+            }
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await signOut(auth);
+        });
+    }
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loginOverlay.style.display = 'none';
+            mainDashboard.style.display = 'block';
+            if (logoutBtn) logoutBtn.style.display = 'block';
+            
+            loadDatabaseStatus();
+            loadDashboardProducts();
+            loadDashboardSchedules();
+        } else {
+            loginOverlay.style.display = 'flex';
+            mainDashboard.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            
+            // clear lists when logged out
+            const productsList = document.getElementById('dashboardProductsList');
+            const schedulesList = document.getElementById('dashboardSchedulesList');
+            if (productsList) productsList.innerHTML = '';
+            if (schedulesList) schedulesList.innerHTML = '';
+        }
+    });
 });

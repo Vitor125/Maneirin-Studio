@@ -26,11 +26,31 @@
                 <li><a href="index.html">Site</a></li>
                 <li><a href="produtos/">Produtos</a></li>
                 <li><a href="agenda/">Agenda</a></li>
+                <li><a href="#" id="logoutBtn" style="display: none; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
             </ul>
         </nav>
     </header>
 
-    <main class="dashboard-container container">
+    <div class="login-overlay container" id="loginOverlay" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+        <div class="dash-card" style="max-width: 400px; width: 100%; text-align: center;">
+            <img src="Fotos/Logo.png" alt="Maneirin Studio" style="height: 60px; margin-bottom: 20px;">
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-lock"></i> Acesso Restrito</h2>
+            <form id="loginForm" class="dashboard-form" style="text-align: left;">
+                <div class="form-group">
+                    <label for="loginEmail">E-mail</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <div id="loginError" class="dashboard-status error" style="display: none; margin-bottom: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 10px; border-radius: 4px; font-size: 0.9rem;"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <main class="dashboard-container container" id="mainDashboard" style="display: none;">
         <div class="dashboard-heading">
             <h1>Painel do Barbeiro</h1>
             <p>Gerencie horários disponíveis e recomendações afiliadas.</p>
