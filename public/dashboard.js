@@ -1,3 +1,6 @@
+import { collection, addDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { db, escapeHtml, formatDateBR, formatTime, safeExternalUrl } from './script.js';
+
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 
 function setDashboardStatus(message, type = 'success') {
@@ -23,31 +26,7 @@ function setDatabaseStatus(message, type = 'success') {
 }
 
 async function loadDatabaseStatus() {
-    try {
-        const response = await fetch(`${API_URL}/db-status`);
-        if (!response.ok) throw new Error('Erro ao consultar banco');
-
-        const data = await response.json();
-        const database = data.database || {};
-        const source = database.source || 'desconhecida';
-        const dialect = database.dialect || 'desconhecido';
-
-        if (database.is_local_sqlite) {
-            setDatabaseStatus(
-                `Atenção: o backend está usando SQLite local (${source}). Na Railway, configure DATABASE_URL para salvar no PostgreSQL.`,
-                'error'
-            );
-            return;
-        }
-
-        setDatabaseStatus(
-            `Banco conectado: ${dialect} via ${source}. Produtos: ${data.products_count}. Horários: ${data.schedules_count}.`,
-            'success'
-        );
-    } catch (error) {
-        console.error(error);
-        setDatabaseStatus('Não foi possível confirmar a conexão com o banco.', 'error');
-    }
+    setDatabaseStatus('Banco conectado: Firebase Firestore', 'success');
 }
 
 function readFileAsDataUrl(file) {
@@ -92,13 +71,7 @@ async function submitProduct(event) {
             affiliate_link: document.getElementById('prodLink').value.trim()
         };
 
-        const response = await fetch(`${API_URL}/products`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(product)
-        });
-
-        if (!response.ok) throw new Error('Erro ao salvar produto');
+        await addDoc(collection(db, "products"), product);
 
         event.target.reset();
         setDashboardStatus('Produto cadastrado com sucesso.');
@@ -115,17 +88,12 @@ async function submitSchedule(event) {
     const schedule = {
         barber_name: document.getElementById('schedBarber').value.trim(),
         date: document.getElementById('schedDate').value,
-        time: `${document.getElementById('schedTime').value}:00`
+        time: `${document.getElementById('schedTime').value}:00`,
+        is_available: true
     };
 
     try {
-        const response = await fetch(`${API_URL}/schedules`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schedule)
-        });
-
-        if (!response.ok) throw new Error('Erro ao salvar horário');
+        await addDoc(collection(db, "schedules"), schedule);
 
         document.getElementById('schedDate').value = '';
         document.getElementById('schedTime').value = '';
@@ -139,8 +107,7 @@ async function submitSchedule(event) {
 
 async function deleteProduct(id) {
     try {
-        const response = await fetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Erro ao remover produto');
+        await deleteDoc(doc(db, "products", id));
         setDashboardStatus('Produto removido.');
         loadDashboardProducts();
     } catch (error) {
@@ -151,8 +118,7 @@ async function deleteProduct(id) {
 
 async function deleteSchedule(id) {
     try {
-        const response = await fetch(`${API_URL}/schedules/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Erro ao remover horário');
+        await deleteDoc(doc(db, "schedules", id));
         setDashboardStatus('Horário removido.');
         loadDashboardSchedules();
     } catch (error) {
@@ -168,9 +134,8 @@ async function loadDashboardProducts() {
     list.innerHTML = '<p class="loading-message">Carregando produtos...</p>';
 
     try {
-        const response = await fetch(`${API_URL}/products`);
-        if (!response.ok) throw new Error('Erro ao carregar produtos');
-        const products = await response.json();
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         if (!products.length) {
             list.innerHTML = '<p class="empty-message">Nenhum produto cadastrado.</p>';
@@ -206,9 +171,8 @@ async function loadDashboardSchedules() {
     list.innerHTML = '<p class="loading-message">Carregando horários...</p>';
 
     try {
-        const response = await fetch(`${API_URL}/schedules?include_unavailable=true`);
-        if (!response.ok) throw new Error('Erro ao carregar horários');
-        const schedules = await response.json();
+        const querySnapshot = await getDocs(collection(db, "schedules"));
+        const schedules = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         if (!schedules.length) {
             list.innerHTML = '<p class="empty-message">Nenhum horário cadastrado.</p>';

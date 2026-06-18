@@ -1,0 +1,21 @@
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Dependencies and local runtimes
+node_modules/
+venv/
+__pycache__/
+
+# Local data and secrets
+.env
+*.local
+*.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

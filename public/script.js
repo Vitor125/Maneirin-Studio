@@ -1,7 +1,21 @@
-const API_URL = window.MANEIRIN_API_URL || '/api';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyChDecK-r3NqC1wgYo0OUXl0R6e6qXF4HM",
+    authDomain: "site-maneirin-studio.firebaseapp.com",
+    projectId: "site-maneirin-studio",
+    storageBucket: "site-maneirin-studio.firebasestorage.app",
+    messagingSenderId: "974534005078",
+    appId: "1:974534005078:web:1adb1420fec91092f086f7"
+};
+
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+
 const WHATSAPP_PHONE = '5521980453636';
 
-function escapeHtml(value = '') {
+export function escapeHtml(value = '') {
     return String(value)
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
@@ -10,21 +24,21 @@ function escapeHtml(value = '') {
         .replaceAll("'", '&#039;');
 }
 
-function buildWhatsappUrl(message) {
+export function buildWhatsappUrl(message) {
     return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
 }
 
-function formatDateBR(dateStr) {
+export function formatDateBR(dateStr) {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
 }
 
-function formatTime(timeStr) {
+export function formatTime(timeStr) {
     return String(timeStr || '').slice(0, 5);
 }
 
-function safeExternalUrl(value) {
+export function safeExternalUrl(value) {
     try {
         const url = new URL(value);
         if (url.protocol === 'http:' || url.protocol === 'https:') {
@@ -224,9 +238,8 @@ async function fetchProducts() {
     if (!container) return;
 
     try {
-        const response = await fetch(`${API_URL}/products`);
-        if (!response.ok) throw new Error('Falha ao carregar produtos');
-        const products = await response.json();
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderProducts(products);
     } catch (error) {
         console.error(error);
@@ -281,10 +294,10 @@ async function fetchSchedules() {
     if (!list) return;
 
     try {
-        const response = await fetch(`${API_URL}/schedules`);
-        if (!response.ok) throw new Error('Falha ao carregar horários');
-        const schedules = await response.json();
-        renderSchedules(schedules);
+        const querySnapshot = await getDocs(collection(db, "schedules"));
+        const schedules = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const availableSchedules = schedules.filter(s => s.is_available !== false);
+        renderSchedules(availableSchedules);
     } catch (error) {
         console.error(error);
         list.innerHTML = '<div class="no-slots">Não foi possível carregar a agenda agora.</div>';
