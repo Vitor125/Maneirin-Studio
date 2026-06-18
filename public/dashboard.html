@@ -11,6 +11,18 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .auth-toggle {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        .auth-toggle a {
+            color: var(--primary);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
@@ -34,19 +46,40 @@
     <div class="login-overlay container" id="loginOverlay" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
         <div class="dash-card" style="max-width: 400px; width: 100%; text-align: center;">
             <img src="Fotos/Logo.png" alt="Maneirin Studio" style="height: 60px; margin-bottom: 20px;">
-            <h2 style="margin-bottom: 20px;"><i class="fas fa-lock"></i> Acesso Restrito</h2>
-            <form id="loginForm" class="dashboard-form" style="text-align: left;">
+            <h2 id="authTitle" style="margin-bottom: 20px;"><i class="fas fa-lock"></i> Acesso Restrito</h2>
+            <form id="authForm" class="dashboard-form" style="text-align: left;">
+                <input type="hidden" id="authMode" value="login">
+                
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label for="authName">Nome Completo</label>
+                    <input type="text" id="authName">
+                </div>
+                
                 <div class="form-group">
-                    <label for="loginEmail">E-mail</label>
-                    <input type="email" id="loginEmail" required>
+                    <label for="authEmail">E-mail</label>
+                    <input type="email" id="authEmail" required>
                 </div>
                 <div class="form-group">
-                    <label for="loginPassword">Senha</label>
-                    <input type="password" id="loginPassword" required>
+                    <label for="authPassword">Senha</label>
+                    <input type="password" id="authPassword" required>
                 </div>
-                <div id="loginError" class="dashboard-status error" style="display: none; margin-bottom: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 10px; border-radius: 4px; font-size: 0.9rem;"></div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar</button>
+                <div id="authError" class="dashboard-status error" style="display: none; margin-bottom: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 10px; border-radius: 4px; font-size: 0.9rem;"></div>
+                <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar</button>
             </form>
+            <div class="auth-toggle">
+                <span id="authToggleText">Não tem uma conta?</span>
+                <a id="authToggleBtn">Cadastre-se</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="pendingOverlay" style="display: none; justify-content: center; align-items: center; min-height: 80vh; text-align: center;">
+        <div class="dash-card" style="max-width: 500px; width: 100%;">
+            <i class="fas fa-clock" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px;"></i>
+            <h2>Aguardando Aprovação</h2>
+            <p style="margin-top: 10px; color: var(--text-muted);">
+                Sua conta foi criada com sucesso, mas você precisa aguardar um administrador aprovar o seu acesso.
+            </p>
         </div>
     </div>
 
@@ -60,6 +93,11 @@
         <div class="database-status" id="databaseStatus" role="status" aria-live="polite"></div>
 
         <div class="dash-grid">
+            <section class="dash-card" id="adminSection" style="display: none; border: 2px solid var(--primary);">
+                <h2><i class="fas fa-users-cog"></i> Gerenciar Barbeiros</h2>
+                <div class="dash-list" id="adminUsersList" aria-live="polite"></div>
+            </section>
+
             <section class="dash-card">
                 <h2><i class="fas fa-calendar-alt"></i> Disponibilidade</h2>
                 <form id="scheduleForm" class="dashboard-form">
