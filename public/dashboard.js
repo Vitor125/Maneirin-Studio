@@ -283,7 +283,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
             const errorDiv = document.getElementById('authError');
+            const submitBtn = document.getElementById('authSubmitBtn');
+            
             errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
             
             try {
                 if (mode === 'login') {
@@ -308,7 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     errorDiv.textContent = 'Erro ao criar conta. A senha deve ter 6+ caracteres ou o email já existe.';
                 }
                 errorDiv.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = mode === 'login' ? 'Entrar' : 'Cadastrar';
             }
+            // Se der certo, a página transiciona e o botão não precisa voltar ao normal (pois a tela de login some).
         });
     }
 

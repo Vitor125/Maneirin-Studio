@@ -1,4 +1,4 @@
-const CACHE_NAME = 'maneirin-studio-v4';
+const CACHE_NAME = 'maneirin-studio-v6';
 const APP_SHELL = [
     '/',
     '/index.html',
