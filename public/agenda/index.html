@@ -35,7 +35,7 @@
         <section class="agenda-hero">
             <div class="container">
                 <h1>Agenda</h1>
-                <p>Escolha um horário disponível e fale direto no WhatsApp para confirmar seu atendimento.</p>
+                <p>Escolha um horário disponível, informe seus dados e receba os lembretes do atendimento.</p>
             </div>
         </section>
 
@@ -49,6 +49,30 @@
         </section>
     </main>
 
+    <div class="appointment-modal" id="appointmentModal" hidden>
+        <section class="appointment-dialog" role="dialog" aria-modal="true" aria-labelledby="appointmentTitle">
+            <button class="appointment-close" type="button" data-close-appointment aria-label="Fechar">&times;</button>
+            <h2 id="appointmentTitle">Confirmar agendamento</h2>
+            <p id="appointmentSummary"></p>
+            <form id="appointmentForm" class="dashboard-form">
+                <div class="form-group">
+                    <label for="appointmentName">Nome completo</label>
+                    <input id="appointmentName" type="text" required maxlength="120">
+                </div>
+                <div class="form-group">
+                    <label for="appointmentPhone">WhatsApp</label>
+                    <input id="appointmentPhone" type="tel" required maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label for="appointmentEmail">E-mail (opcional)</label>
+                    <input id="appointmentEmail" type="email" maxlength="160">
+                </div>
+                <button class="btn btn-primary" type="submit">Confirmar horário</button>
+            </form>
+            <div id="appointmentResult" class="appointment-result" role="status" hidden></div>
+        </section>
+    </div>
+
     <a class="floating-whatsapp" data-whatsapp-message="Olá! Vim pela agenda do Maneirin Studio e gostaria de tirar uma dúvida." aria-label="Chamar no WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
@@ -59,6 +83,6 @@
         </div>
     </footer>
 
-    <script src="../script.js"></script>
+    <script type="module" src="../script.js"></script>
 </body>
 </html>

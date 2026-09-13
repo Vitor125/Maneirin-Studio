@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -51,6 +51,113 @@ export function safeExternalUrl(value) {
     }
 
     return '#';
+}
+
+function toLocalDate(date, time) {
+    const [year, month, day] = date.split('-').map(Number);
+    const [hours, minutes] = time.split(':').map(Number);
+    return new Date(year, month - 1, day, hours, minutes);
+}
+
+function calendarDate(date) {
+    return date.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
+}
+
+export function buildCalendarUrl(appointment) {
+    const start = toLocalDate(appointment.date, appointment.time);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: `Atendimento Maneirin Studio - ${appointment.barber_name}`,
+        dates: `${calendarDate(start)}/${calendarDate(end)}`,
+        details: `Cliente: ${appointment.client_name}\nTelefone: ${appointment.client_phone}\nLembrete criado pelo site Maneirin Studio.`,
+        location: 'R. Nilópolis, 352 - Éden, São João de Meriti - RJ'
+    });
+    return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+function setupAppointmentBooking() {
+    const form = document.getElementById('appointmentForm');
+    const modal = document.getElementById('appointmentModal');
+    const closeButton = document.querySelector('[data-close-appointment]');
+    const result = document.getElementById('appointmentResult');
+    let selectedSlot = null;
+
+    if (!form || !modal) return;
+
+    const closeModal = () => {
+        modal.hidden = true;
+        result.hidden = true;
+        result.innerHTML = '';
+        form.reset();
+    };
+
+    if (closeButton) closeButton.addEventListener('click', closeModal);
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeModal();
+    });
+
+    document.addEventListener('click', event => {
+        const button = event.target.closest('[data-book-slot]');
+        if (!button) return;
+
+        selectedSlot = JSON.parse(button.dataset.bookSlot);
+        document.getElementById('appointmentSummary').textContent =
+            `${formatDateBR(selectedSlot.date)} às ${formatTime(selectedSlot.time)} com ${selectedSlot.barber_name}`;
+        modal.hidden = false;
+        document.getElementById('appointmentName').focus();
+    });
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!selectedSlot) return;
+
+        const submitButton = form.querySelector('button[type="submit"]');
+        const appointment = {
+            schedule_id: selectedSlot.id,
+            barber_name: selectedSlot.barber_name,
+            date: selectedSlot.date,
+            time: selectedSlot.time,
+            client_name: document.getElementById('appointmentName').value.trim(),
+            client_phone: document.getElementById('appointmentPhone').value.trim(),
+            client_email: document.getElementById('appointmentEmail').value.trim(),
+            created_at: new Date().toISOString()
+        };
+
+        submitButton.disabled = true;
+        result.hidden = true;
+        try {
+            await runTransaction(db, async transaction => {
+                const scheduleRef = doc(db, 'schedules', selectedSlot.id);
+                const appointmentRef = doc(db, 'appointments', selectedSlot.id);
+                const scheduleSnapshot = await transaction.get(scheduleRef);
+
+                if (!scheduleSnapshot.exists() || scheduleSnapshot.data().is_available === false) {
+                    throw new Error('Este horário acabou de ser reservado por outra pessoa.');
+                }
+
+                transaction.set(appointmentRef, appointment);
+                transaction.update(scheduleRef, { is_available: false, appointment_id: selectedSlot.id });
+            });
+
+            const customerMessage = `Olá! Meu agendamento no Maneirin Studio foi confirmado para ${formatDateBR(appointment.date)} às ${appointment.time} com ${appointment.barber_name}.`;
+            const barberMessage = `Novo agendamento: ${appointment.client_name} para ${formatDateBR(appointment.date)} às ${appointment.time} com ${appointment.barber_name}. Telefone: ${appointment.client_phone}.`;
+            result.innerHTML = `
+                <p><strong>Horário reservado com sucesso!</strong></p>
+                <a class="btn btn-primary" href="${buildCalendarUrl(appointment)}" target="_blank" rel="noopener">Adicionar à minha agenda</a>
+                <a class="btn btn-whatsapp" href="${buildWhatsappUrl(customerMessage)}" target="_blank" rel="noopener">Receber confirmação no WhatsApp</a>
+                <a class="btn btn-secondary" href="${buildWhatsappUrl(barberMessage)}" target="_blank" rel="noopener">Avisar o barbeiro</a>
+            `;
+            result.hidden = false;
+            form.reset();
+            fetchSchedules();
+        } catch (error) {
+            result.textContent = error.message || 'Não foi possível reservar este horário.';
+            result.hidden = false;
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
 }
 
 function setupMobileMenu() {
@@ -206,6 +313,63 @@ function setupProductCarousel(container) {
     next.addEventListener('click', () => scrollCarousel(1));
 }
 
+function setupGalleryCarousel(container) {
+    const track = container.querySelector('.gallery-track');
+    const prev = container.querySelector('[data-gallery-prev]');
+    const next = container.querySelector('[data-gallery-next]');
+    if (!track || !prev || !next) return;
+
+    const scroll = direction => {
+        track.scrollBy({ left: direction * track.clientWidth, behavior: 'smooth' });
+    };
+    prev.addEventListener('click', () => scroll(-1));
+    next.addEventListener('click', () => scroll(1));
+}
+
+function renderGallery(photos) {
+    const container = document.querySelector('[data-gallery-list]');
+    if (!container) return;
+
+    if (!photos.length) {
+        container.innerHTML = '<p class="empty-message">As fotos do Studio aparecerão aqui.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <button class="gallery-button gallery-button-prev" type="button" data-gallery-prev aria-label="Foto anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="gallery-track">
+            ${photos.map(photo => `
+                <figure class="gallery-slide">
+                    <img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(photo.alt || 'Foto do Maneirin Studio')}" loading="lazy">
+                    ${photo.alt ? `<figcaption>${escapeHtml(photo.alt)}</figcaption>` : ''}
+                </figure>
+            `).join('')}
+        </div>
+        <button class="gallery-button gallery-button-next" type="button" data-gallery-next aria-label="Próxima foto">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+    setupGalleryCarousel(container);
+}
+
+async function fetchGallery() {
+    const container = document.querySelector('[data-gallery-list]');
+    if (!container) return;
+
+    try {
+        const querySnapshot = await getDocs(collection(db, 'gallery'));
+        const photos = querySnapshot.docs
+            .map(photo => ({ id: photo.id, ...photo.data() }))
+            .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+        renderGallery(photos);
+    } catch (error) {
+        console.error('Erro ao carregar galeria:', error);
+        container.innerHTML = '<p class="empty-message">Não foi possível carregar as fotos agora.</p>';
+    }
+}
+
 function renderProducts(products) {
     const container = document.querySelector('[data-products-list]');
     if (!container) return;
@@ -272,15 +436,18 @@ function renderSchedules(schedules) {
                 ${slots.map(slot => {
                     const barber = escapeHtml(slot.barber_name);
                     const time = formatTime(slot.time);
-                    const message = `Olá! Vim pelo site do Maneirin Studio e gostaria de agendar um horário com ${slot.barber_name} no dia ${formatDateBR(slot.date)} às ${time}.`;
-
                     return `
                         <article class="slot-card fade-in">
                             <span class="slot-time">${time}</span>
                             <span class="slot-barber">Com ${barber}</span>
-                            <a href="${buildWhatsappUrl(message)}" class="btn btn-primary" target="_blank" rel="noopener">
+                            <button type="button" class="btn btn-primary" data-book-slot='${escapeHtml(JSON.stringify({
+                                id: slot.id,
+                                barber_name: slot.barber_name,
+                                date: slot.date,
+                                time: slot.time
+                            }))}'>
                                 Agendar
-                            </a>
+                            </button>
                         </article>
                     `;
                 }).join('')}
@@ -311,8 +478,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupScrollHeader();
     setupWhatsappLinks();
     setupInstallAppPrompt();
+    setupAppointmentBooking();
     setupAnimations();
     fetchProducts();
+    fetchGallery();
     fetchSchedules();
     registerServiceWorker();
 });
