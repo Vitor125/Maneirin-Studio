@@ -20,6 +20,23 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() in ['admin', 'Admin', 'ADMIN', 'barber', 'Barber', 'BARBER'];
     }
 
+    function isNewAppointment() {
+      return request.resource.data.keys().hasOnly([
+        'schedule_id', 'barber_name', 'date', 'time', 'client_name',
+        'client_phone', 'client_email', 'created_at'
+      ])
+      && request.resource.data.schedule_id is string
+      && request.resource.data.client_name is string
+      && request.resource.data.client_phone is string
+      && request.resource.data.client_email is string
+      && request.resource.data.date is string
+      && request.resource.data.time is string
+      && request.resource.data.client_name.size() > 0
+      && request.resource.data.client_phone.size() > 0
+      && request.resource.data.date.size() == 10
+      && request.resource.data.time.size() >= 4;
+    }
+
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
@@ -31,9 +48,34 @@ service cloud.firestore {
       allow write: if isBarberOrAdmin();
     }
 
+    match /gallery/{photoId} {
+      allow read: if true;
+      allow create, update, delete: if isBarberOrAdmin();
+    }
+
     match /schedules/{scheduleId} {
       allow read: if true;
-      allow write: if isBarberOrAdmin();
+      allow create, delete: if isBarberOrAdmin();
+      allow update: if isBarberOrAdmin()
+        || (
+          !isAuthenticated()
+          && resource.data.is_available == true
+          && request.resource.data.is_available == false
+          && request.resource.data.appointment_id == scheduleId
+          && getAfter(/databases/$(database)/documents/appointments/$(scheduleId)).data.schedule_id == scheduleId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_available', 'appointment_id'])
+        );
+    }
+
+    match /appointments/{appointmentId} {
+      allow create: if !isAuthenticated() && isNewAppointment()
+        && request.resource.data.schedule_id == appointmentId
+        && exists(/databases/$(database)/documents/schedules/$(appointmentId))
+        && get(/databases/$(database)/documents/schedules/$(appointmentId)).data.is_available == true
+        && request.resource.data.barber_name == get(/databases/$(database)/documents/schedules/$(appointmentId)).data.barber_name
+        && request.resource.data.date == get(/databases/$(database)/documents/schedules/$(appointmentId)).data.date
+        && request.resource.data.time == get(/databases/$(database)/documents/schedules/$(appointmentId)).data.time;
+      allow read, update, delete: if isBarberOrAdmin();
     }
   }
 }

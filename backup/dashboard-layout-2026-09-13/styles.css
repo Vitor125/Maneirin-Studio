@@ -1276,14 +1276,13 @@ footer p {
 }
 
 /* Dashboard desktop layout inspired by the MEVAM administration panel. */
-@media screen and (min-width: 769px) {
 .dashboard-page {
-    background: #f1f5f9;
-    color: var(--bg-color);
+    background: #f5f8fd;
+    color: #0b1a36;
 }
 
 .dashboard-page .header {
-    background: var(--bg-color);
+    background: #082a72;
     border: 0;
     bottom: 0;
     left: 0;
@@ -1321,7 +1320,7 @@ footer p {
 
 .dashboard-page .nav-links a {
     border-radius: 12px;
-    color: var(--text-muted);
+    color: #b8c9ec;
     display: block;
     font-size: 0.82rem;
     padding: 13px 14px;
@@ -1383,7 +1382,7 @@ footer p {
 }
 
 .dashboard-page .dashboard-heading h1 {
-    color: var(--bg-color);
+    color: #0b1a36;
     font-size: clamp(1.75rem, 3vw, 2.45rem);
     letter-spacing: -0.04em;
     margin: 0 0 8px;
@@ -1391,7 +1390,7 @@ footer p {
 }
 
 .dashboard-page .dashboard-heading p {
-    color: #64748b;
+    color: #61708c;
     margin: 0;
 }
 
@@ -1401,28 +1400,28 @@ footer p {
 
 .dashboard-page .dash-card {
     background: #ffffff;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #dce5f3;
     border-radius: 17px;
-    box-shadow: 0 12px 35px rgba(17, 24, 39, 0.08);
+    box-shadow: 0 12px 35px rgba(8, 42, 114, 0.045);
     padding: 27px;
 }
 
 .dashboard-page .dash-card h2 {
-    color: var(--bg-color);
+    color: #0b1a36;
     font-size: 1.06rem;
     letter-spacing: -0.02em;
 }
 
 .dashboard-page .form-group input,
 .dashboard-page .form-group textarea {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: var(--bg-color);
+    background: #fbfdff;
+    border-color: #d9e2ef;
+    color: #0b1a36;
 }
 
 .dashboard-page .list-item {
     background: #ffffff;
-    border-color: #cbd5e1;
+    border-color: #e5ebf4;
 }
 
 .dashboard-page .login-overlay {
@@ -1431,12 +1430,6 @@ footer p {
     justify-content: center;
     min-height: 100vh;
     padding: 40px;
-}
-
-.dashboard-page #pendingOverlay,
-.dashboard-page #mainDashboard,
-.dashboard-page #adminSection {
-    display: none;
 }
 
 .dashboard-page .login-card {
@@ -1475,17 +1468,67 @@ footer p {
 }
 
 .dashboard-page .pending-icon {
-    color: var(--primary-light);
+    color: #0f4bb8;
     font-size: 4rem;
     margin-bottom: 20px;
 }
 
 .dashboard-page .pending-card p {
-    color: #64748b;
+    color: #61708c;
     margin-top: 10px;
 }
 
 .dashboard-page .admin-card {
-    border: 2px solid var(--primary-light);
+    border: 2px solid #0f4bb8;
 }
+
+@media screen and (max-width: 768px) {
+    .dashboard-page .header {
+        bottom: auto;
+        left: 0;
+        right: 0;
+        top: 0;
+        width: 100%;
+    }
+
+    .dashboard-page .navbar {
+        flex-direction: row;
+        height: auto;
+        padding: 15px 5%;
+    }
+
+    .dashboard-page .logo {
+        margin: 0;
+    }
+
+    .dashboard-page .nav-links {
+        display: flex;
+    }
+
+    .dashboard-page .nav-links li {
+        margin: 25px 0;
+    }
+
+    .dashboard-page .nav-links a {
+        font-size: 1.5rem;
+    }
+
+    .dashboard-page .dashboard-container,
+    .dashboard-page #loginOverlay,
+    .dashboard-page #pendingOverlay {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .dashboard-page .dashboard-container {
+        padding: 120px 15px 50px;
+    }
+
+    .dashboard-page .dashboard-heading {
+        text-align: center;
+    }
+
+    .dashboard-page .login-overlay {
+        padding: 120px 16px 40px;
+    }
 }
