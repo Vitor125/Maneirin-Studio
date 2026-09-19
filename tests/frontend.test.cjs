@@ -120,6 +120,13 @@ test('imagem excessiva é rejeitada antes da gravação no Firestore', async () 
     await assert.rejects(app.getGalleryImage(), /600 KB/);
 });
 
+test('links de páginas são rejeitados quando não carregam como imagem', async () => {
+    const { context: app } = loadApp({ Image: class {
+        set src(value) { queueMicrotask(() => this.onerror()); }
+    } });
+    await assert.rejects(app.validateImageLink('https://example.com/postagem'), /não abre uma imagem/);
+});
+
 test('login libera novamente o botão após sucesso e depois de erro', async () => {
     let fail = false;
     const { context: app, element, listeners } = loadApp({

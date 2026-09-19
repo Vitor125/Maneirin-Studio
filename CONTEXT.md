@@ -49,7 +49,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/script.js`: inicialização única do Firebase, utilitários, páginas públicas, galeria, agenda em tempo real e registro do service worker.
 - `public/dashboard.js`: autenticação, papéis, produtos, galeria, horários e calendário.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/sw.js`: cache `maneirin-studio-v13`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
+- `public/sw.js`: cache `maneirin-studio-v14`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
 - `public/manifest.webmanifest`, `public/offline.html`, `public/icons/`: instalação e experiência offline.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
@@ -100,7 +100,7 @@ As coleções históricas `photos` e `appointments` não são usadas nesta vers�
 ## Validação e operação
 
 - `node --check public/script.js`, `node --check public/dashboard.js`, `node --check public/sw.js`.
-- `node --test tests/frontend.test.cjs`: 8 testes de agenda, fuso, calendário, escape de HTML/URL, confirmação, perfil, tamanho de imagem e login.
+- `node --test tests/frontend.test.cjs`: 9 testes de agenda, fuso, calendário, escape de HTML/URL, confirmação, perfil, tamanho/link de imagem e login.
 - `node tests/firestore-rules.cjs`: 32 testes no serviço de simulação, com Firebase CLI instalado e login ativo. Não cria usuários nem reservas reais.
 - `firebase deploy --only firestore:rules --project site-maneirin-studio --dry-run --non-interactive`: compilação de regras.
 - Revisão visual em 1440 px e 390 px; cadastro de foto/horário validado com Firebase simulado na máquina.
@@ -111,6 +111,8 @@ As coleções históricas `photos` e `appointments` não são usadas nesta vers�
 Publicação de 18/09/2026 concluída no Firebase Hosting e nas regras Firestore. A conferência HTTP confirmou que os nove arquivos principais publicados são idênticos aos locais, que as três fotos estão acessíveis publicamente e que a leitura anônima de perfis retorna 403.
 
 A leitura de produção durante a auditoria encontrou 1 admin, 1 barbeiro, 3 fotos, 1 produto e nenhum horário cadastrado. Por isso a agenda vazia é esperada até o cadastro de novas disponibilidades. Os testes de confirmação e cadastro foram feitos com dados fictícios, sem criar compromissos reais.
+
+Uma das três entradas antigas de galeria contém um link de postagem Instagram, não um arquivo de imagem. A entrada foi preservada no banco; a interface pública omite imagens que falham e o painel informa quais precisam ser substituídas. Novos links de foto/produto são carregados como imagem para validação antes da gravação. URLs temporárias de redes sociais podem expirar; upload de arquivo é mais durável.
 
 ## Pendências reais
 

@@ -1283,6 +1283,8 @@ footer p {
     background: var(--accent-color);
 }
 
+.gallery-button[hidden], .list-thumb[hidden] { display: none; }
+
 
 /* Dashboard desktop layout inspired by the MEVAM administration panel. */
 @media screen and (min-width: 769px) {

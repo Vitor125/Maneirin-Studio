@@ -273,6 +273,20 @@ function renderGallery(photos) {
         </button>
     `;
     setupGalleryCarousel(container);
+    const updateControls = () => {
+        const count = container.querySelectorAll('.gallery-slide').length;
+        container.querySelectorAll('.gallery-button').forEach(button => { button.hidden = count < 2; });
+        if (!count) container.innerHTML = '<p class="empty-message">As fotos do Studio estarão disponíveis em breve.</p>';
+    };
+    container.querySelectorAll('.gallery-slide img').forEach(img => {
+        const removeBrokenPhoto = () => {
+            img.closest('.gallery-slide')?.remove();
+            updateControls();
+        };
+        img.addEventListener('error', removeBrokenPhoto, { once: true });
+        if (img.complete && !img.naturalWidth) removeBrokenPhoto();
+    });
+    updateControls();
 }
 
 async function fetchGallery() {

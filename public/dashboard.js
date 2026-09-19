@@ -61,6 +61,22 @@ function readFileAsDataUrl(file) {
     });
 }
 
+function validateImageLink(url) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        const timeout = window.setTimeout(() => {
+            image.onload = image.onerror = null;
+            reject(new Error('A imagem demorou para carregar. Envie o arquivo ou tente outro link.'));
+        }, 15000);
+        image.onload = () => { window.clearTimeout(timeout); resolve(url); };
+        image.onerror = () => {
+            window.clearTimeout(timeout);
+            reject(new Error('Este link não abre uma imagem. Envie o arquivo ou use o endereço direto da foto.'));
+        };
+        image.src = url;
+    });
+}
+
 function toGoogleCalendarDate(date) {
     const pad = value => String(value).padStart(2, '0');
     const year = date.getUTCFullYear();
@@ -104,7 +120,7 @@ async function getProductImage() {
 
     const url = urlInput.value.trim();
     if (url && safeExternalUrl(url) === '#') throw new Error('Informe um link HTTP/HTTPS para a imagem.');
-    return url;
+    return url ? validateImageLink(url) : '';
 }
 
 async function getGalleryImage() {
@@ -124,7 +140,7 @@ async function getGalleryImage() {
     if (!url || safeExternalUrl(url) === '#') {
         throw new Error('Envie uma foto ou informe um link HTTP/HTTPS válido.');
     }
-    return url;
+    return validateImageLink(url);
 }
 
 async function submitGalleryPhoto(event) {
@@ -372,7 +388,7 @@ async function loadDashboardGallery() {
         }
         list.innerHTML = photos.map(photo => `
             <article class="list-item">
-                <img class="list-thumb" src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(photo.alt || 'Foto da galeria')}">
+                <img class="list-thumb" src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(photo.alt || 'Foto da galeria')}" onerror="this.hidden=true; this.nextElementSibling.textContent='Imagem indisponível. Remova esta entrada e envie o arquivo ou o link direto da foto.';">
                 <div class="list-item-content"><strong>${escapeHtml(photo.alt || 'Foto do Studio')}</strong></div>
                 <button class="icon-button danger" type="button" data-delete-gallery="${photo.id}" aria-label="Remover foto">
                     <i class="fas fa-trash-alt"></i>
