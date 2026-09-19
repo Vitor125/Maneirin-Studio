@@ -1242,6 +1242,8 @@ footer p {
 .gallery-slide {
     flex: 0 0 100%;
     margin: 0;
+    overflow: hidden;
+    border-radius: 12px;
     position: relative;
     scroll-snap-align: center;
 }
@@ -1250,8 +1252,10 @@ footer p {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     display: block;
-    height: 400px;
+    aspect-ratio: 1 / 1;
+    height: auto;
     object-fit: cover;
+    object-position: center;
     width: 100%;
 }
 

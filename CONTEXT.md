@@ -31,6 +31,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 
 - Página inicial com apresentação, produtos em carrossel, contatos e seção “Nossos trabalhos”.
 - Galeria em carrossel no espaço antes ocupado pelo placeholder ao lado de “Sobre o Studio”. No celular fica abaixo do texto. Fotos e descrições são lidas de `gallery`.
+- Fotos da galeria exibidas em formato quadrado (1:1), como solicitado em 18/09/2026, com recorte centralizado e sem distorção no computador e no celular. Os arquivos originais são preservados.
 - Painel permite adicionar fotos por arquivo ou URL e remover fotos existentes. Não importa nem duplica as fotos já armazenadas.
 - Vitrine completa em `/produtos/`, com aviso de comissão de afiliado.
 - Agenda em `/agenda/`, com WhatsApp pré-preenchido.
@@ -50,7 +51,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/script.js`: inicialização única do Firebase, utilitários, páginas públicas, galeria, agenda em tempo real e registro do service worker.
 - `public/dashboard.js`: autenticação, papéis, produtos, galeria, horários e calendário.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/sw.js`: cache `maneirin-studio-v15`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
+- `public/sw.js`: cache `maneirin-studio-v16`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
 - `public/manifest.webmanifest`, `public/offline.html`, `public/icons/`: instalação e experiência offline.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
