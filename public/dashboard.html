@@ -80,8 +80,15 @@
         <div class="dashboard-status" id="dashboardStatus" role="status" aria-live="polite"></div>
         <div class="database-status" id="databaseStatus" role="status" aria-live="polite"></div>
 
-        <div class="dash-grid">
-            <section class="dash-card">
+        <div class="dashboard-workspace">
+            <div class="dashboard-tabs" role="tablist" aria-label="Funcionalidades do painel">
+                <button class="dashboard-tab" id="tabAgenda" type="button" role="tab" aria-controls="agendaPanel" aria-selected="true" data-dashboard-tab="agendaPanel"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda</button>
+                <button class="dashboard-tab" id="tabFotos" type="button" role="tab" aria-controls="galleryPanel" aria-selected="false" tabindex="-1" data-dashboard-tab="galleryPanel"><i class="fas fa-images" aria-hidden="true"></i> Fotos</button>
+                <button class="dashboard-tab" id="tabProdutos" type="button" role="tab" aria-controls="productsPanel" aria-selected="false" tabindex="-1" data-dashboard-tab="productsPanel"><i class="fas fa-box" aria-hidden="true"></i> Produtos</button>
+                <button class="dashboard-tab" id="tabBarbeiros" type="button" role="tab" aria-controls="adminSection" aria-selected="false" tabindex="-1" data-dashboard-tab="adminSection" hidden><i class="fas fa-users-cog" aria-hidden="true"></i> Barbeiros</button>
+            </div>
+            <div class="dashboard-panels">
+            <section class="dash-card dashboard-panel" id="galleryPanel" role="tabpanel" aria-labelledby="tabFotos" tabindex="0" hidden>
                 <h2><i class="fas fa-images"></i> Fotos do Studio</h2>
                 <form id="galleryForm" class="dashboard-form">
                     <div class="form-group">
@@ -100,12 +107,12 @@
                 </form>
                 <div class="dash-list" id="dashboardGalleryList" aria-live="polite"></div>
             </section>
-            <section class="dash-card admin-section" id="adminSection" style="display: none;">
+            <section class="dash-card admin-section dashboard-panel" id="adminSection" role="tabpanel" aria-labelledby="tabBarbeiros" tabindex="0" hidden>
                 <h2><i class="fas fa-users-cog"></i> Gerenciar Barbeiros</h2>
                 <div class="dash-list" id="adminUsersList" aria-live="polite"></div>
             </section>
 
-            <section class="dash-card">
+            <section class="dash-card dashboard-panel" id="agendaPanel" role="tabpanel" aria-labelledby="tabAgenda" tabindex="0">
                 <h2><i class="fas fa-calendar-alt"></i> Disponibilidade</h2>
                 <p class="form-help">Após combinar pelo WhatsApp, confirme o horário abaixo. Ele sairá do site e o Google Calendar abrirá para você salvar o evento.</p>
                 <form id="scheduleForm" class="dashboard-form">
@@ -129,7 +136,7 @@
                 <div class="dash-list" id="dashboardSchedulesList" aria-live="polite"></div>
             </section>
 
-            <section class="dash-card">
+            <section class="dash-card dashboard-panel" id="productsPanel" role="tabpanel" aria-labelledby="tabProdutos" tabindex="0" hidden>
                 <h2><i class="fas fa-box"></i> Produto Afiliado</h2>
                 <form id="productForm" class="dashboard-form">
                     <div class="form-group">
@@ -157,6 +164,7 @@
 
                 <div class="dash-list" id="dashboardProductsList" aria-live="polite"></div>
             </section>
+        </div>
         </div>
     </main>
 

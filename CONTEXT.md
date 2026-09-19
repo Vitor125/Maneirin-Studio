@@ -37,6 +37,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - Login e cadastro por e-mail/senha, aprovação e revogação de barbeiros pelo administrador.
 - Cadastro, listagem e remoção de produtos e horários; confirmação de horários e link de calendário.
 - Painel com menu lateral escuro e cartões claros no desktop, recuperado do histórico; visual escuro e menu superior no celular.
+- Área central organizada em abas **Agenda**, **Fotos**, **Produtos** e **Barbeiros** (somente admin), conforme pedido de 18/09/2026. Uma funcionalidade fica visível por vez; trocar de aba preserva os formulários. Agenda é a aba inicial. As setas, Home e End permitem navegação por teclado; perder permissão de admin oculta Barbeiros e retorna para Agenda quando necessário. No celular as abas se organizam em duas colunas.
 - PWA com manifest, ícones, instalação quando suportada, cache do conteúdo estático e página offline. Os dados dinâmicos exigem internet.
 
 ## Arquivos e arquitetura
@@ -49,7 +50,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/script.js`: inicialização única do Firebase, utilitários, páginas públicas, galeria, agenda em tempo real e registro do service worker.
 - `public/dashboard.js`: autenticação, papéis, produtos, galeria, horários e calendário.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/sw.js`: cache `maneirin-studio-v14`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
+- `public/sw.js`: cache `maneirin-studio-v15`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
 - `public/manifest.webmanifest`, `public/offline.html`, `public/icons/`: instalação e experiência offline.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.

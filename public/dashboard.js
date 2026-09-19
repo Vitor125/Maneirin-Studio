@@ -466,6 +466,50 @@ async function loadAdminUsers() {
     }
 }
 
+function setupDashboardTabs() {
+    const tabs = [...document.querySelectorAll('[data-dashboard-tab]')];
+    if (!tabs.length) return () => {};
+    let activePanel = 'agendaPanel';
+
+    const select = (panelId, focus = false) => {
+        const selected = tabs.find(tab => tab.dataset.dashboardTab === panelId && !tab.hidden);
+        if (!selected) return;
+        activePanel = panelId;
+        tabs.forEach(tab => {
+            const active = tab === selected;
+            tab.setAttribute('aria-selected', String(active));
+            tab.tabIndex = active ? 0 : -1;
+            document.getElementById(tab.dataset.dashboardTab).hidden = !active;
+        });
+        if (focus) selected.focus();
+    };
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => select(tab.dataset.dashboardTab));
+        tab.addEventListener('keydown', event => {
+            const visible = tabs.filter(item => !item.hidden);
+            const index = visible.indexOf(tab);
+            let next;
+            if (event.key === 'ArrowRight') next = visible[(index + 1) % visible.length];
+            if (event.key === 'ArrowLeft') next = visible[(index - 1 + visible.length) % visible.length];
+            if (event.key === 'Home') next = visible[0];
+            if (event.key === 'End') next = visible[visible.length - 1];
+            if (next) {
+                event.preventDefault();
+                select(next.dataset.dashboardTab, true);
+            }
+        });
+    });
+
+    return role => {
+        document.getElementById('tabBarbeiros').hidden = role !== 'admin';
+        if (!['admin', 'barber'].includes(role) || (activePanel === 'adminSection' && role !== 'admin')) {
+            activePanel = 'agendaPanel';
+        }
+        select(activePanel);
+    };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const authForm = document.getElementById('authForm');
     const authToggleBtn = document.getElementById('authToggleBtn');
@@ -473,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingOverlay = document.getElementById('pendingOverlay');
     const mainDashboard = document.getElementById('mainDashboard');
     const logoutBtn = document.getElementById('logoutBtn');
-    const adminSection = document.getElementById('adminSection');
+    const updateDashboardTabs = setupDashboardTabs();
 
     const galleryForm = document.getElementById('galleryForm');
     const handleForm = handler => async event => {
@@ -573,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async user => {
         unsubscribeProfile();
         mainDashboard.style.display = 'none';
-        adminSection.style.display = 'none';
+        updateDashboardTabs(null);
         for (const id of ['dashboardProductsList', 'dashboardSchedulesList', 'dashboardGalleryList', 'adminUsersList']) {
             document.getElementById(id).innerHTML = '';
         }
@@ -589,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const allowed = ['admin', 'barber'].includes(role);
                 pendingOverlay.style.display = allowed ? 'none' : 'flex';
                 mainDashboard.style.display = allowed ? 'block' : 'none';
-                adminSection.style.display = role === 'admin' ? 'block' : 'none';
+                updateDashboardTabs(role);
                 if (!allowed) return;
                 if (role === 'admin') loadAdminUsers();
                 loadDatabaseStatus();

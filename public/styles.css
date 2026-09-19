@@ -1448,10 +1448,10 @@ footer p {
 }
 
 .dashboard-page #pendingOverlay,
-.dashboard-page #mainDashboard,
-.dashboard-page #adminSection {
+.dashboard-page #mainDashboard {
     display: none;
 }
+
 
 .dashboard-page .login-card {
     max-width: 430px;
@@ -1528,4 +1528,55 @@ footer p {
     .dashboard-page .database-status.error { color: #991b1b; }
     .dashboard-page #loginOverlay,
     .dashboard-page #pendingOverlay { padding-left: 24px; padding-right: 24px; }
+}
+
+/* Área central com uma funcionalidade por aba. */
+.dashboard-workspace { max-width: 1120px; margin: 0 auto; }
+.dashboard-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 6px;
+    margin-bottom: 22px;
+    background: var(--surface-color);
+    border: 1px solid rgba(96, 165, 250, .2);
+    border-radius: 14px;
+}
+.dashboard-tab {
+    flex: 1 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 22px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font: 600 .95rem var(--font-body);
+    cursor: pointer;
+}
+.dashboard-tab:hover { background: rgba(96, 165, 250, .12); }
+.dashboard-tab[aria-selected="true"] { background: var(--primary-light); color: #fff; }
+.dashboard-tab:focus-visible,
+.dashboard-panel:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 3px; }
+.dashboard-tab[hidden], .dashboard-panel[hidden] { display: none !important; }
+.dashboard-panel { min-width: 0; }
+@media screen and (min-width: 769px) {
+    .dashboard-tabs { background: #fff; border-color: #cbd5e1; }
+    .dashboard-tab { color: #475569; }
+    .dashboard-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: start;
+        column-gap: 36px;
+    }
+    .dashboard-panel > h2,
+    .dashboard-panel > .form-help,
+    .dashboard-panel.admin-section > .dash-list { grid-column: 1 / -1; }
+    .dashboard-panel > .dash-list { margin-top: 0; max-height: 640px; }
+}
+@media screen and (max-width: 480px) {
+    .dashboard-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+    .dashboard-tab { padding: 12px 10px; gap: 6px; font-size: .85rem; }
 }
