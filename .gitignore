@@ -19,3 +19,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local review artifacts and editor workspace
+.qa/
+*.code-workspace

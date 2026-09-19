@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -32,12 +32,40 @@ export function buildWhatsappUrl(message) {
 
 export function formatDateBR(dateStr) {
     if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-');
+    const [year, month, day] = String(dateStr).split('-');
     return `${day}/${month}/${year}`;
 }
 
 export function formatTime(timeStr) {
     return String(timeStr || '').slice(0, 5);
+}
+
+export function getScheduleStart(schedule) {
+    const date = String(schedule.date || '');
+    const rawTime = String(schedule.time || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)
+        || !/^([01]\d|2[0-3]):[0-5]\d(:00)?$/.test(rawTime)) return null;
+    const time = formatTime(rawTime);
+    // Os horários pertencem ao Studio, independentemente do fuso do visitante.
+    const start = new Date(`${date}T${time}:00-03:00`);
+    if (Number.isNaN(start.getTime())) return null;
+    const local = new Date(start.getTime() - 3 * 60 * 60 * 1000);
+    return local.toISOString().slice(0, 16) === `${date}T${time}` ? start : null;
+}
+
+export function isUpcomingSchedule(schedule) {
+    const start = getScheduleStart(schedule);
+    if (!start) return false;
+
+    return start.getTime() >= Date.now();
+}
+
+export function sortSchedulesByStart(schedules) {
+    return [...schedules].sort((first, second) => {
+        const firstStart = getScheduleStart(first)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const secondStart = getScheduleStart(second)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return firstStart - secondStart;
+    });
 }
 
 export function safeExternalUrl(value) {
@@ -206,6 +234,63 @@ function setupProductCarousel(container) {
     next.addEventListener('click', () => scrollCarousel(1));
 }
 
+function setupGalleryCarousel(container) {
+    const track = container.querySelector('.gallery-track');
+    const prev = container.querySelector('[data-gallery-prev]');
+    const next = container.querySelector('[data-gallery-next]');
+    if (!track || !prev || !next) return;
+
+    const scroll = direction => {
+        track.scrollBy({ left: direction * track.clientWidth, behavior: 'smooth' });
+    };
+    prev.addEventListener('click', () => scroll(-1));
+    next.addEventListener('click', () => scroll(1));
+}
+
+function renderGallery(photos) {
+    const container = document.querySelector('[data-gallery-list]');
+    if (!container) return;
+
+    if (!photos.length) {
+        container.innerHTML = '<p class="empty-message">As fotos do Studio aparecerão aqui.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <button class="gallery-button gallery-button-prev" type="button" data-gallery-prev aria-label="Foto anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="gallery-track" tabindex="0" aria-label="Fotos dos trabalhos do Studio">
+            ${photos.map(photo => `
+                <figure class="gallery-slide">
+                    <img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(photo.alt || 'Foto do Maneirin Studio')}" loading="lazy">
+                    ${photo.alt ? `<figcaption>${escapeHtml(photo.alt)}</figcaption>` : ''}
+                </figure>
+            `).join('')}
+        </div>
+        <button class="gallery-button gallery-button-next" type="button" data-gallery-next aria-label="Próxima foto">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+    setupGalleryCarousel(container);
+}
+
+async function fetchGallery() {
+    const container = document.querySelector('[data-gallery-list]');
+    if (!container) return;
+
+    try {
+        const querySnapshot = await getDocs(collection(db, 'gallery'));
+        const photos = querySnapshot.docs
+            .map(photo => ({ id: photo.id, ...photo.data() }))
+            .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+        renderGallery(photos);
+    } catch (error) {
+        console.error('Erro ao carregar galeria:', error);
+        container.innerHTML = '<p class="empty-message">Não foi possível carregar as fotos agora.</p>';
+    }
+}
+
 function renderProducts(products) {
     const container = document.querySelector('[data-products-list]');
     if (!container) return;
@@ -253,12 +338,14 @@ function renderSchedules(schedules) {
     const list = document.getElementById('agendaList');
     if (!list) return;
 
-    if (!schedules.length) {
+    const orderedSchedules = sortSchedulesByStart(schedules);
+
+    if (!orderedSchedules.length) {
         list.innerHTML = '<div class="no-slots">Nenhum horário disponível no momento.</div>';
         return;
     }
 
-    const groupedSchedules = schedules.reduce((groups, schedule) => {
+    const groupedSchedules = orderedSchedules.reduce((groups, schedule) => {
         const key = schedule.date;
         if (!groups[key]) groups[key] = [];
         groups[key].push(schedule);
@@ -270,9 +357,9 @@ function renderSchedules(schedules) {
             <h2 class="date-title"><i class="far fa-calendar-alt"></i> ${formatDateBR(date)}</h2>
             <div class="slots-grid">
                 ${slots.map(slot => {
-                    const barber = escapeHtml(slot.barber_name);
-                    const time = formatTime(slot.time);
-                    const message = `Olá! Vim pelo site do Maneirin Studio e gostaria de agendar um horário com ${slot.barber_name} no dia ${formatDateBR(slot.date)} às ${time}.`;
+                    const barber = escapeHtml(slot.barber_name || 'Maneirin Studio');
+                    const time = escapeHtml(formatTime(slot.time));
+                    const message = `Olá! Vim pelo site do Maneirin Studio e gostaria de agendar um horário com ${slot.barber_name || 'Maneirin Studio'} no dia ${formatDateBR(slot.date)} às ${time}.`;
 
                     return `
                         <article class="slot-card fade-in">
@@ -296,10 +383,18 @@ async function fetchSchedules() {
     if (!list) return;
 
     try {
-        const querySnapshot = await getDocs(collection(db, "schedules"));
-        const schedules = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const availableSchedules = schedules.filter(s => s.is_available !== false);
-        renderSchedules(availableSchedules);
+        const availableQuery = query(collection(db, 'schedules'), where('is_available', '==', true));
+        let schedules = [];
+        const refresh = () => renderSchedules(schedules.filter(isUpcomingSchedule));
+        onSnapshot(availableQuery, snapshot => {
+            schedules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            refresh();
+        }, error => {
+            console.error(error);
+            schedules = [];
+            list.innerHTML = '<div class="no-slots">Não foi possível carregar a agenda agora.</div>';
+        });
+        window.setInterval(() => { if (schedules.length) refresh(); }, 60000);
     } catch (error) {
         console.error(error);
         list.innerHTML = '<div class="no-slots">Não foi possível carregar a agenda agora.</div>';
@@ -313,6 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupInstallAppPrompt();
     setupAnimations();
     fetchProducts();
+    fetchGallery();
     fetchSchedules();
     registerServiceWorker();
 });

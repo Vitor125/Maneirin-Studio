@@ -21,9 +21,13 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update, delete: if isAdmin() || request.auth.uid == userId;
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow create: if isAuthenticated() && request.auth.uid == userId
+        && request.resource.data.role == 'pending'
+        && request.resource.data.keys().hasOnly(['email', 'name', 'role', 'createdAt']);
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+      allow delete: if isAdmin();
     }
 
     match /products/{productId} {
@@ -31,8 +35,13 @@ service cloud.firestore {
       allow write: if isBarberOrAdmin();
     }
 
-    match /schedules/{scheduleId} {
+    match /gallery/{photoId} {
       allow read: if true;
+      allow write: if isBarberOrAdmin();
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if resource.data.is_available == true || isBarberOrAdmin();
       allow write: if isBarberOrAdmin();
     }
   }
