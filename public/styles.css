@@ -108,6 +108,8 @@ h2::after {
     color: white;
 }
 
+[hidden] { display: none !important; }
+
 .btn-compact {
     font-size: 0.8rem;
     padding: 8px 14px;
@@ -559,7 +561,7 @@ h2::after {
 
 .contact-info {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
     gap: 30px;
 }
 
@@ -1145,10 +1147,10 @@ footer p {
     }
 
     .products-carousel-track {
-        margin-left: -5vw;
-        padding-left: 5vw;
-        padding-right: 5vw;
-        width: 100vw;
+        margin-left: 0;
+        padding-left: 0;
+        padding-right: 0;
+        width: 100%;
     }
 
     .products-carousel-track .product-card {

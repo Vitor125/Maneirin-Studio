@@ -1,12 +1,31 @@
 import { collection, addDoc, deleteDoc, doc, getDocs, runTransaction, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { db, auth, escapeHtml, formatDateBR, formatTime, getScheduleStart, isUpcomingSchedule, safeExternalUrl, sortSchedulesByStart } from './script.js';
+import { db, auth } from './js/firebase.js';
+import { escapeHtml, formatDateBR, formatTime, getScheduleStart, isUpcomingSchedule, safeExternalUrl, safeImageUrl, sortSchedulesByStart, documentData, boundedText } from './js/utils.js';
+import { buildGoogleCalendarUrl, GOOGLE_CALENDAR_ID } from './js/calendar.js';
+import { readImageInput, bindImageErrors } from './js/media.js';
+import { initCommonUI } from './js/ui.js';
 
-const MAX_IMAGE_SIZE = 600 * 1024;
-const APPOINTMENT_DURATION_MINUTES = 60;
-const STUDIO_ADDRESS = 'R. Nilópolis, 352 - Éden, São João de Meriti - RJ, 25535-050';
-const GOOGLE_CALENDAR_ID = 'd2970e3f2205392d94a72d232a6e03bccd39237d8291c4f068d6fa6348e42fc7@group.calendar.google.com';
-const GOOGLE_CALENDAR_TIMEZONE = 'America/Sao_Paulo';
+let dashboardAccessVersion = 0;
+let dashboardRole = null;
+
+function resetDashboardData(role = null) {
+    dashboardAccessVersion++;
+    dashboardRole = role;
+    for (const id of ['dashboardProductsList', 'dashboardSchedulesList', 'dashboardGalleryList', 'adminUsersList']) {
+        document.getElementById(id).innerHTML = '';
+    }
+    setDashboardStatus('');
+    setDatabaseStatus('');
+}
+
+// Uma resposta iniciada por outra sessão/permissão não pode preencher o painel.
+function captureDashboardAccess(requiredRole) {
+    const version = dashboardAccessVersion;
+    const uid = auth.currentUser?.uid;
+    return () => Boolean(uid && uid === auth.currentUser?.uid && version === dashboardAccessVersion
+        && (requiredRole ? dashboardRole === requiredRole : ['admin', 'barber'].includes(dashboardRole)));
+}
 
 function setDashboardStatus(message, type = 'success') {
     const status = document.getElementById('dashboardStatus');
@@ -31,10 +50,14 @@ function setDatabaseStatus(message, type = 'success') {
 }
 
 async function loadDatabaseStatus() {
+    const canRender = captureDashboardAccess();
+    if (!canRender()) return;
     try {
         await getDoc(doc(db, 'users', auth.currentUser.uid));
+        if (!canRender()) return;
         setDatabaseStatus('Painel conectado.', 'success');
     } catch {
+        if (!canRender()) return;
         setDatabaseStatus('Não foi possível verificar a conexão.', 'error');
     }
 }
@@ -45,117 +68,39 @@ async function ensureUserProfile(user, name) {
         const profile = await transaction.get(ref);
         if (!profile.exists()) transaction.set(ref, {
             email: user.email,
-            name: name || user.email.split('@')[0],
+            name: (name?.trim() || user.email.split('@')[0]).slice(0, 120),
             role: 'pending',
             createdAt: new Date().toISOString()
         });
     });
 }
 
-function readFileAsDataUrl(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-    });
+function getProductImage() {
+    return readImageInput('prodImageFile', 'prodImageUrl');
 }
 
-function validateImageLink(url) {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
-        const timeout = window.setTimeout(() => {
-            image.onload = image.onerror = null;
-            reject(new Error('A imagem demorou para carregar. Envie o arquivo ou tente outro link.'));
-        }, 15000);
-        image.onload = () => { window.clearTimeout(timeout); resolve(url); };
-        image.onerror = () => {
-            window.clearTimeout(timeout);
-            reject(new Error('Este link não abre uma imagem. Envie o arquivo ou use o endereço direto da foto.'));
-        };
-        image.src = url;
-    });
-}
-
-function toGoogleCalendarDate(date) {
-    const pad = value => String(value).padStart(2, '0');
-    const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1);
-    const day = pad(date.getUTCDate());
-    const hours = pad(date.getUTCHours());
-    const minutes = pad(date.getUTCMinutes());
-    const seconds = pad(date.getUTCSeconds());
-
-    return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
-}
-
-function buildGoogleCalendarUrl(schedule, clientName) {
-    const start = getScheduleStart(schedule);
-    const end = new Date(start.getTime() + APPOINTMENT_DURATION_MINUTES * 60 * 1000);
-    const params = new URLSearchParams({
-        action: 'TEMPLATE',
-        src: GOOGLE_CALENDAR_ID,
-        text: `Maneirin Studio - ${clientName}`,
-        dates: `${toGoogleCalendarDate(start)}/${toGoogleCalendarDate(end)}`,
-        details: `Cliente: ${clientName}\nBarbeiro: ${schedule.barber_name || 'Maneirin Studio'}\nHorário confirmado pela dashboard do Maneirin Studio.`,
-        location: STUDIO_ADDRESS,
-        ctz: GOOGLE_CALENDAR_TIMEZONE
-    });
-
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
-
-async function getProductImage() {
-    const fileInput = document.getElementById('prodImageFile');
-    const urlInput = document.getElementById('prodImageUrl');
-    const file = fileInput.files[0];
-
-    if (file) {
-        if (!file.type.startsWith('image/')) throw new Error('Selecione um arquivo de imagem.');
-        if (file.size > MAX_IMAGE_SIZE) {
-            throw new Error('Use uma imagem de até 600 KB ou um link de imagem.');
-        }
-        return readFileAsDataUrl(file);
-    }
-
-    const url = urlInput.value.trim();
-    if (url && safeExternalUrl(url) === '#') throw new Error('Informe um link HTTP/HTTPS para a imagem.');
-    return url ? validateImageLink(url) : '';
-}
-
-async function getGalleryImage() {
-    const fileInput = document.getElementById('galleryImageFile');
-    const urlInput = document.getElementById('galleryImageUrl');
-    const file = fileInput.files[0];
-
-    if (file) {
-        if (!file.type.startsWith('image/')) throw new Error('Selecione uma imagem.');
-        if (file.size > MAX_IMAGE_SIZE) {
-            throw new Error('Use uma imagem de até 600 KB ou um link de imagem.');
-        }
-        return readFileAsDataUrl(file);
-    }
-
-    const url = urlInput.value.trim();
-    if (!url || safeExternalUrl(url) === '#') {
-        throw new Error('Envie uma foto ou informe um link HTTP/HTTPS válido.');
-    }
-    return validateImageLink(url);
+function getGalleryImage() {
+    return readImageInput('galleryImageFile', 'galleryImageUrl', true);
 }
 
 async function submitGalleryPhoto(event) {
     event.preventDefault();
+    const canRender = captureDashboardAccess();
+    if (!canRender()) return;
     try {
         const imageUrl = await getGalleryImage();
+        if (!canRender()) return;
         await addDoc(collection(db, 'gallery'), {
             image_url: imageUrl,
-            alt: document.getElementById('galleryAlt').value.trim(),
+            alt: boundedText(document.getElementById('galleryAlt').value, 'Descrição da foto', 160, false),
             created_at: new Date().toISOString()
         });
+        if (!canRender()) return;
         event.target.reset();
         setDashboardStatus('Foto adicionada à galeria.');
         loadDashboardGallery();
     } catch (error) {
+        if (!canRender()) return;
         setDashboardStatus(error.message || 'Erro ao adicionar foto.', 'error');
     }
 }
@@ -172,20 +117,23 @@ async function deleteGalleryPhoto(id) {
 
 async function submitProduct(event) {
     event.preventDefault();
+    const canRender = captureDashboardAccess();
+    if (!canRender()) return;
     try {
         const imageUrl = await getProductImage();
+        if (!canRender()) return;
         if (!imageUrl) {
             setDashboardStatus('Adicione uma foto ou um link de imagem para o produto.', 'error');
             return;
         }
 
         const product = {
-            name: document.getElementById('prodName').value.trim(),
-            description: document.getElementById('prodDesc').value.trim(),
+            name: boundedText(document.getElementById('prodName').value, 'Nome do produto', 120),
+            description: boundedText(document.getElementById('prodDesc').value, 'Descrição do produto', 2000, false),
             image_url: imageUrl,
-            affiliate_link: document.getElementById('prodLink').value.trim()
+            affiliate_link: safeExternalUrl(document.getElementById('prodLink').value.trim())
         };
-        if (!product.name || safeExternalUrl(product.affiliate_link) === '#') {
+        if (product.affiliate_link === '#' || product.affiliate_link.length > 4096) {
             throw new Error('Informe o nome e um link HTTP/HTTPS para o produto.');
         }
         if (new TextEncoder().encode(JSON.stringify(product)).length > 950000) {
@@ -193,10 +141,12 @@ async function submitProduct(event) {
         }
 
         await addDoc(collection(db, "products"), product);
+        if (!canRender()) return;
         event.target.reset();
         setDashboardStatus('Produto cadastrado com sucesso.');
         loadDashboardProducts();
     } catch (error) {
+        if (!canRender()) return;
         setDashboardStatus(error.message || 'Erro ao salvar produto.', 'error');
     }
 }
@@ -211,7 +161,7 @@ async function submitSchedule(event) {
     };
 
     try {
-        if (!schedule.barber_name || !isUpcomingSchedule(schedule)) {
+        if (!schedule.barber_name || schedule.barber_name.length > 120 || !isUpcomingSchedule(schedule)) {
             setDashboardStatus('Informe o barbeiro e um horário válido no futuro.', 'error');
             return;
         }
@@ -249,8 +199,8 @@ async function confirmSchedule(id, schedule) {
     const clientName = window.prompt('Nome do cliente para confirmar este agendamento:');
     const normalizedClientName = clientName?.trim();
 
-    if (!normalizedClientName) {
-        setDashboardStatus('Informe o nome do cliente para confirmar o agendamento.', 'error');
+    if (!normalizedClientName || normalizedClientName.length > 120) {
+        setDashboardStatus('Informe o nome do cliente com até 120 caracteres.', 'error');
         return;
     }
 
@@ -278,8 +228,14 @@ async function confirmSchedule(id, schedule) {
                 is_available: false
             });
         });
-        if (calendarWindow) calendarWindow.location.replace(buildGoogleCalendarUrl(confirmedSchedule, normalizedClientName));
-        setDashboardStatus(calendarWindow
+        let openedCalendar = false;
+        try {
+            if (calendarWindow && !calendarWindow.closed) {
+                calendarWindow.location.replace(buildGoogleCalendarUrl(confirmedSchedule, normalizedClientName));
+                openedCalendar = true;
+            }
+        } catch { /* A confirmação já foi salva; o link do painel permite recuperar o evento. */ }
+        setDashboardStatus(openedCalendar
             ? 'Horário confirmado. Clique em Salvar no Google Calendar para concluir o evento.'
             : 'Horário confirmado. Use Adicionar à agenda para salvar o evento no Google Calendar.');
         loadDashboardSchedules();
@@ -290,43 +246,51 @@ async function confirmSchedule(id, schedule) {
 }
 
 async function loadDashboardProducts() {
+    const canRender = captureDashboardAccess();
+    if (!canRender()) return;
     const list = document.getElementById('dashboardProductsList');
     if (!list) return;
     list.innerHTML = '<p class="loading-message">Carregando produtos...</p>';
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
-        const products = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (!canRender()) return;
+        const products = querySnapshot.docs.map(d => documentData(d));
         if (!products.length) {
             list.innerHTML = '<p class="empty-message">Nenhum produto cadastrado.</p>';
             return;
         }
         list.innerHTML = products.map(product => `
             <article class="list-item">
-                <img class="list-thumb" src="${escapeHtml(product.image_url || '')}" alt="${escapeHtml(product.name)}" onerror="this.style.display='none';">
+                <img class="list-thumb" src="${escapeHtml(safeImageUrl(product.image_url))}" alt="${escapeHtml(product.name)}">
                 <div class="list-item-content">
                     <strong>${escapeHtml(product.name)}</strong>
                     <a href="${escapeHtml(safeExternalUrl(product.affiliate_link))}" target="_blank" rel="noopener">Abrir link</a>
                 </div>
-                <button class="icon-button danger" type="button" data-delete-product="${product.id}" aria-label="Remover produto">
+                <button class="icon-button danger" type="button" data-delete-product="${escapeHtml(product.id)}" aria-label="Remover produto">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </article>
         `).join('');
 
+        bindImageErrors(list);
         list.querySelectorAll('[data-delete-product]').forEach(btn => {
             btn.addEventListener('click', () => deleteProduct(btn.dataset.deleteProduct));
         });
     } catch (error) {
+        if (!canRender()) return;
         list.innerHTML = '<p class="empty-message">Não foi possível carregar os produtos.</p>';
     }
 }
 async function loadDashboardSchedules() {
+    const canRender = captureDashboardAccess();
+    if (!canRender()) return;
     const list = document.getElementById('dashboardSchedulesList');
     if (!list) return;
     list.innerHTML = '<p class="loading-message">Carregando horários...</p>';
     try {
         const querySnapshot = await getDocs(collection(db, "schedules"));
-        const schedules = sortSchedulesByStart(querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })))
+        if (!canRender()) return;
+        const schedules = sortSchedulesByStart(querySnapshot.docs.map(d => documentData(d)))
             .sort((first, second) => Number(isUpcomingSchedule(second)) - Number(isUpcomingSchedule(first)));
         if (!schedules.length) {
             list.innerHTML = '<p class="empty-message">Nenhum horário cadastrado.</p>';
@@ -346,14 +310,14 @@ async function loadDashboardSchedules() {
                 </div>
                 <div class="list-actions">
                     ${isAvailable && isUpcomingSchedule(schedule) ? `
-                        <button class="btn btn-primary btn-compact" type="button" data-confirm-schedule="${schedule.id}">
+                        <button class="btn btn-primary btn-compact" type="button" data-confirm-schedule="${escapeHtml(schedule.id)}">
                             Confirmar
                         </button>
                     ` : ''}
                     ${!isAvailable && getScheduleStart(schedule) && schedule.client_name ? `
                         <a class="btn btn-secondary btn-compact" href="${escapeHtml(buildGoogleCalendarUrl(schedule, schedule.client_name))}" target="_blank" rel="noopener">Adicionar à agenda</a>
                     ` : ''}
-                    <button class="icon-button danger" type="button" data-delete-schedule="${schedule.id}" aria-label="Remover horário">
+                    <button class="icon-button danger" type="button" data-delete-schedule="${escapeHtml(schedule.id)}" aria-label="Remover horário">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
@@ -363,54 +327,68 @@ async function loadDashboardSchedules() {
 
         list.querySelectorAll('[data-confirm-schedule]').forEach(btn => {
             const schedule = schedules.find(item => item.id === btn.dataset.confirmSchedule);
-            btn.addEventListener('click', () => confirmSchedule(btn.dataset.confirmSchedule, schedule));
+            btn.addEventListener('click', async () => {
+                if (btn.disabled) return;
+                btn.disabled = true;
+                try { await confirmSchedule(btn.dataset.confirmSchedule, schedule); }
+                finally { btn.disabled = false; }
+            });
         });
 
         list.querySelectorAll('[data-delete-schedule]').forEach(btn => {
             btn.addEventListener('click', () => deleteSchedule(btn.dataset.deleteSchedule));
         });
     } catch (error) {
+        if (!canRender()) return;
         list.innerHTML = '<p class="empty-message">Não foi possível carregar os horários.</p>';
     }
 }
 
 async function loadDashboardGallery() {
+    const canRender = captureDashboardAccess();
+    if (!canRender()) return;
     const list = document.getElementById('dashboardGalleryList');
     if (!list) return;
 
     list.innerHTML = '<p class="loading-message">Carregando fotos...</p>';
     try {
         const querySnapshot = await getDocs(collection(db, 'gallery'));
-        const photos = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (!canRender()) return;
+        const photos = querySnapshot.docs.map(d => documentData(d));
         if (!photos.length) {
             list.innerHTML = '<p class="empty-message">Nenhuma foto cadastrada.</p>';
             return;
         }
         list.innerHTML = photos.map(photo => `
             <article class="list-item">
-                <img class="list-thumb" src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(photo.alt || 'Foto da galeria')}" onerror="this.hidden=true; this.nextElementSibling.textContent='Imagem indisponível. Remova esta entrada e envie o arquivo ou o link direto da foto.';">
+                <img class="list-thumb" src="${escapeHtml(safeImageUrl(photo.image_url))}" alt="${escapeHtml(photo.alt || 'Foto da galeria')}">
                 <div class="list-item-content"><strong>${escapeHtml(photo.alt || 'Foto do Studio')}</strong></div>
-                <button class="icon-button danger" type="button" data-delete-gallery="${photo.id}" aria-label="Remover foto">
+                <button class="icon-button danger" type="button" data-delete-gallery="${escapeHtml(photo.id)}" aria-label="Remover foto">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </article>
         `).join('');
+        bindImageErrors(list, 'Imagem indisponível. Remova esta entrada e envie o arquivo ou o link direto da foto.');
         list.querySelectorAll('[data-delete-gallery]').forEach(button => {
             button.addEventListener('click', () => deleteGalleryPhoto(button.dataset.deleteGallery));
         });
     } catch (error) {
+        if (!canRender()) return;
         list.innerHTML = '<p class="empty-message">Não foi possível carregar as fotos.</p>';
     }
 }
 
 async function loadAdminUsers() {
+    const canRender = captureDashboardAccess('admin');
+    if (!canRender()) return;
     const list = document.getElementById('adminUsersList');
     if (!list) return;
     
     list.innerHTML = '<p class="loading-message">Carregando barbeiros...</p>';
     try {
         const querySnapshot = await getDocs(collection(db, 'users'));
-        const users = querySnapshot.docs.map(d => ({ id: d.id, ...d.data(), role: String(d.data().role || 'pending').toLowerCase() }));
+        if (!canRender()) return;
+        const users = querySnapshot.docs.map(d => ({ ...documentData(d), role: String(d.data().role || 'pending').toLowerCase() }));
         
         if (!users.length) {
             list.innerHTML = '<p class="empty-message">Nenhum usuário encontrado.</p>';
@@ -424,9 +402,9 @@ async function loadAdminUsers() {
                     <span>${escapeHtml(u.email)} - Status: <b>${escapeHtml(u.role)}</b></span>
                 </div>
                 ${u.role === 'pending' ? `
-                    <button class="btn btn-primary btn-compact" type="button" data-approve="${u.id}">Aprovar</button>
+                    <button class="btn btn-primary btn-compact" type="button" data-approve="${escapeHtml(u.id)}">Aprovar</button>
                 ` : u.role === 'barber' ? `
-                    <button class="btn btn-danger-outline btn-compact" type="button" data-revoke="${u.id}">Revogar</button>
+                    <button class="btn btn-danger-outline btn-compact" type="button" data-revoke="${escapeHtml(u.id)}">Revogar</button>
                 ` : `
                     <span class="admin-role-label">Admin</span>
                 `}
@@ -441,6 +419,7 @@ async function loadAdminUsers() {
                     await updateDoc(doc(db, 'users', uid), { role: 'barber' });
                     await loadAdminUsers();
                 } catch {
+        if (!canRender()) return;
                     setDashboardStatus('Não foi possível aprovar o acesso.', 'error');
                     btn.disabled = false;
                 }
@@ -511,6 +490,7 @@ function setupDashboardTabs() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initCommonUI();
     const authForm = document.getElementById('authForm');
     const authToggleBtn = document.getElementById('authToggleBtn');
     const loginOverlay = document.getElementById('loginOverlay');
@@ -537,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (authToggleBtn) {
         authToggleBtn.addEventListener('click', () => {
+            if (document.getElementById('authSubmitBtn').disabled) return;
             const mode = document.getElementById('authMode').value;
             const authTitle = document.getElementById('authTitle');
             const authSubmitBtn = document.getElementById('authSubmitBtn');
@@ -575,7 +556,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const submitBtn = document.getElementById('authSubmitBtn');
             
             errorDiv.style.display = 'none';
+            if (submitBtn.disabled) return;
             submitBtn.disabled = true;
+            authToggleBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
             
             try {
@@ -600,6 +583,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerHTML = mode === 'login' ? 'Entrar' : 'Cadastrar';
             }
             finally {
+                authToggleBtn.disabled = false;
+                document.getElementById('authPassword').value = '';
                 submitBtn.disabled = false;
                 submitBtn.textContent = mode === 'login' ? 'Entrar' : 'Cadastrar';
             }
@@ -609,45 +594,73 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            await signOut(auth);
+            try {
+                await signOut(auth);
+            } catch {
+                window.alert('Não foi possível sair. Verifique sua conexão e tente novamente.');
+            }
         });
     }
 
     let unsubscribeProfile = () => {};
+    let authGeneration = 0;
+    const showAccessMessage = (title, message, retry = false) => {
+        document.getElementById('pendingTitle').textContent = title;
+        document.getElementById('pendingMessage').textContent = message;
+        document.getElementById('retryAccessBtn').hidden = !retry;
+    };
+    document.getElementById('retryAccessBtn').addEventListener('click', () => window.location.reload());
+
     onAuthStateChanged(auth, async user => {
+        const generation = ++authGeneration;
+        const isCurrentSession = () => generation === authGeneration && auth.currentUser?.uid === user?.uid;
         unsubscribeProfile();
+        unsubscribeProfile = () => {};
         mainDashboard.style.display = 'none';
+        resetDashboardData();
         updateDashboardTabs(null);
-        for (const id of ['dashboardProductsList', 'dashboardSchedulesList', 'dashboardGalleryList', 'adminUsersList']) {
-            document.getElementById(id).innerHTML = '';
-        }
+        for (const form of [productForm, scheduleForm, galleryForm]) form?.reset();
+        document.getElementById('authPassword').value = '';
         loginOverlay.style.display = user ? 'none' : 'flex';
         pendingOverlay.style.display = user ? 'flex' : 'none';
         logoutBtn.style.display = user ? 'block' : 'none';
         if (!user) return;
+        showAccessMessage('Verificando acesso', 'Aguarde enquanto carregamos as permissões da sua conta.');
+        const failAccess = error => {
+            if (!isCurrentSession()) return;
+            console.error('Erro ao verificar acesso:', error);
+            resetDashboardData();
+            updateDashboardTabs(null);
+            mainDashboard.style.display = 'none';
+            pendingOverlay.style.display = 'flex';
+            showAccessMessage('Não foi possível verificar o acesso', 'Verifique sua conexão e tente novamente.', true);
+        };
         try {
             await ensureUserProfile(user, document.getElementById('authName').value.trim());
-            if (auth.currentUser?.uid !== user.uid) return;
+            if (!isCurrentSession()) return;
             unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), snapshot => {
+                if (!isCurrentSession()) return;
                 const role = String(snapshot.data()?.role || 'pending').toLowerCase();
                 const allowed = ['admin', 'barber'].includes(role);
+                const changed = dashboardRole !== role;
+                if (changed) resetDashboardData(role);
                 pendingOverlay.style.display = allowed ? 'none' : 'flex';
                 mainDashboard.style.display = allowed ? 'block' : 'none';
                 updateDashboardTabs(role);
-                if (!allowed) return;
+                if (!allowed) {
+                    for (const form of [productForm, scheduleForm, galleryForm]) form?.reset();
+                    showAccessMessage('Aguardando aprovação', 'Um administrador precisa liberar o acesso da sua conta ao painel.');
+                    return;
+                }
+                if (!changed) return;
                 if (role === 'admin') loadAdminUsers();
                 loadDatabaseStatus();
                 loadDashboardProducts();
                 loadDashboardSchedules();
                 loadDashboardGallery();
-            }, error => {
-                console.error('Erro ao verificar acesso:', error);
-                mainDashboard.style.display = 'none';
-                pendingOverlay.style.display = 'flex';
-            });
+            }, failAccess);
         } catch (error) {
-            console.error('Erro ao verificar acesso:', error);
-            pendingOverlay.style.display = 'flex';
+            failAccess(error);
         }
     });
 });

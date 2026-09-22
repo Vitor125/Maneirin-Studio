@@ -1,0 +1,12 @@
+{
+  "name": "maneirin-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site e painel do Maneirin Studio, sem etapa de build.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "check": "node scripts/check.cjs",
+    "test": "node --test tests/frontend.test.cjs tests/service-worker.test.cjs",
+    "test:rules": "node tests/firestore-rules.cjs"
+  }
+}

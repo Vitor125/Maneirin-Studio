@@ -1,4 +1,4 @@
-const CACHE_NAME = 'maneirin-studio-v17';
+const CACHE_NAME = 'maneirin-studio-v18';
 const APP_SHELL = [
     '/',
     '/index.html',
@@ -10,6 +10,11 @@ const APP_SHELL = [
     '/styles.css',
     '/script.js',
     '/dashboard.js',
+    '/js/firebase.js',
+    '/js/utils.js',
+    '/js/ui.js',
+    '/js/media.js',
+    '/js/calendar.js',
     '/Fotos/Logo.png',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
@@ -43,17 +48,24 @@ self.addEventListener('fetch', event => {
     if (request.method !== 'GET') return;
 
     // Dados do Firebase e autenticação nunca são armazenados neste cache.
-    if (url.origin !== self.location.origin) return;
+    if (url.origin !== self.location.origin || url.pathname.startsWith('/__/')) return;
     event.respondWith((async () => {
-        const cache = await caches.open(CACHE_NAME);
+        let cache;
+        try { cache = await caches.open(CACHE_NAME); } catch { /* A rede funciona mesmo sem cache. */ }
         try {
             const response = await fetch(request);
-            if (response.ok) await cache.put(request, response.clone());
+            // Falha de armazenamento não deve descartar uma resposta válida da rede.
+            if (cache && response.ok && !url.search && APP_SHELL.includes(url.pathname)) {
+                try { await cache.put(request, response.clone()); } catch { /* Cache indisponível ou cheio. */ }
+            }
             return response;
         } catch (error) {
-            const cached = await cache.match(request);
+            const cached = await cache?.match(request);
             if (cached) return cached;
-            if (request.mode === 'navigate') return cache.match('/offline.html');
+            if (request.mode === 'navigate') {
+                const offline = await cache?.match('/offline.html');
+                if (offline) return offline;
+            }
             throw error;
         }
     })());

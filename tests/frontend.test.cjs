@@ -32,12 +32,13 @@ function loadApp(overrides = {}) {
         window: { prompt: () => 'Cliente de teste', open: () => null, setTimeout: () => 1, clearTimeout() {}, setInterval() {}, addEventListener() {} },
         ...overrides
     });
-    for (const file of ['script.js', 'dashboard.js']) {
+    for (const file of ['js/firebase.js', 'js/utils.js', 'js/media.js', 'js/calendar.js', 'js/ui.js', 'script.js', 'dashboard.js']) {
         let source = fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8');
         source = source.replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
         vm.runInContext(source, context, { filename: file });
     }
     context.setupAnimations = () => {};
+    context.initCommonUI = () => {};
     return { context, element, listeners };
 }
 
@@ -141,4 +142,121 @@ test('login libera novamente o botão após sucesso e depois de erro', async () 
     await element('authForm').submit({ preventDefault() {} });
     assert.equal(element('authSubmitBtn').disabled, false);
     assert.equal(element('authError').style.display, 'block');
+});
+
+test('metadados vencem campo id forjado e IDs são escapados nos botões', async () => {
+    const maliciousId = 'x" onclick="alert(1)';
+    const { context: app, element } = loadApp({
+        getAuth: () => ({ currentUser: { uid: 'owner' } }),
+        getDocs: async () => ({ docs: [{ id: maliciousId, data: () => ({ id: 'forged', name: '<img onerror=alert(1)>', affiliate_link: 'https://example.com' }) }] })
+    });
+    assert.equal(app.documentData({ id: 'real', data: () => ({ id: 'forged' }) }).id, 'real');
+    app.resetDashboardData('admin');
+    await app.loadDashboardProducts();
+    const html = element('dashboardProductsList').innerHTML;
+    assert.ok(html.includes('data-delete-product="x&quot; onclick=&quot;alert(1)"'));
+    assert.ok(!html.includes(' onclick="'));
+    assert.ok(!html.includes('<img onerror'));
+});
+
+test('resposta atrasada de lista não reaparece após revogar acesso', async () => {
+    let resolve;
+    const { context: app, element } = loadApp({
+        getAuth: () => ({ currentUser: { uid: 'owner' } }),
+        getDocs: () => new Promise(done => { resolve = done; })
+    });
+    app.resetDashboardData('admin');
+    const loading = app.loadAdminUsers();
+    app.resetDashboardData('barber');
+    resolve({ docs: [{ id: 'private', data: () => ({ email: 'private@example.com', role: 'pending' }) }] });
+    await loading;
+    assert.equal(element('adminUsersList').innerHTML, '');
+});
+
+test('erro atrasado de rede não sobrescreve outra sessão', async () => {
+    let reject;
+    const { context: app, element } = loadApp({
+        getAuth: () => ({ currentUser: { uid: 'owner' } }),
+        getDocs: () => new Promise((_, fail) => { reject = fail; })
+    });
+    app.resetDashboardData('admin');
+    const loading = app.loadDashboardSchedules();
+    app.resetDashboardData();
+    reject(new Error('permission-denied'));
+    await loading;
+    assert.equal(element('dashboardSchedulesList').innerHTML, '');
+});
+
+test('URLs de imagem bloqueiam scripts, SVG embutido e credenciais', () => {
+    const { context: app } = loadApp();
+    for (const url of ['javascript:alert(1)', 'data:text/html,<script>', 'data:image/svg+xml;base64,PHN2Zz4=', 'https://user:pass@example.com/photo.jpg']) {
+        assert.equal(app.safeImageUrl(url), '');
+    }
+    assert.equal(app.safeImageUrl('data:image/png;base64,aGVsbG8='), 'data:image/png;base64,aGVsbG8=');
+    assert.equal(app.safeImageUrl('https://example.com/photo.jpg'), 'https://example.com/photo.jpg');
+});
+
+test('upload verifica conteúdo e rejeita arquivo falso mesmo com MIME de imagem', async () => {
+    const { context: app, element } = loadApp({
+        FileReader: class { readAsDataURL() { this.result = 'data:image/png;base64,bm90LWFuLWltYWdl'; this.onload(); } },
+        Image: class { set src(value) { queueMicrotask(() => this.onerror()); } }
+    });
+    element('galleryImageFile').files = [{ size: 10, type: 'image/png' }];
+    await assert.rejects(app.getGalleryImage(), /não abre uma imagem/);
+    element('galleryImageFile').files = [{ size: 10, type: 'image/svg+xml' }];
+    await assert.rejects(app.getGalleryImage(), /JPG, PNG/);
+});
+
+test('falha ao abrir calendário não apresenta reserva salva como erro', async () => {
+    const slot = { date: '2030-01-01', time: '10:00', barber_name: 'Nicolas', is_available: true };
+    const { context: app, element } = loadApp({ runTransaction: async (_, callback) => callback({
+        get: async () => ({ exists: () => true, data: () => slot }), update() {}
+    }) });
+    app.window.open = () => ({ location: { replace() { throw new Error('Janela indisponível'); } }, close() {} });
+    await app.confirmSchedule('slot', slot);
+    assert.match(element('dashboardStatus').textContent, /Horário confirmado.*Adicionar à agenda/);
+});
+
+test('validação limita textos antes da gravação', () => {
+    const { context: app } = loadApp();
+    assert.equal(app.boundedText('  Corte  ', 'Nome', 120), 'Corte');
+    assert.throws(() => app.boundedText(' ', 'Nome', 120), /Nome/);
+    assert.throws(() => app.boundedText('x'.repeat(161), 'Descrição', 160, false), /160/);
+});
+
+test('carregamento de foto interrompido por revogação não grava em outra sessão', async () => {
+    let resolveImage;
+    let writes = 0;
+    const { context: app } = loadApp({
+        getAuth: () => ({ currentUser: { uid: 'owner' } }), addDoc: async () => { writes++; }
+    });
+    app.getGalleryImage = () => new Promise(resolve => { resolveImage = resolve; });
+    app.resetDashboardData('admin');
+    const upload = app.submitGalleryPhoto({ preventDefault() {}, target: { reset() {} } });
+    app.resetDashboardData('pending');
+    resolveImage('https://example.com/image.jpg');
+    await upload;
+    assert.equal(writes, 0);
+});
+
+test('callback antigo de perfil não reabre painel após sair', async () => {
+    const user = { uid: 'owner', email: 'test@example.com' };
+    const auth = { currentUser: user };
+    let authCallback;
+    let profileCallback;
+    const { element, listeners } = loadApp({
+        getAuth: () => auth,
+        onAuthStateChanged: (_, callback) => { authCallback = callback; },
+        onSnapshot: (_, callback) => { profileCallback = callback; return () => {}; },
+        runTransaction: async (_, callback) => callback({ get: async () => ({ exists: () => true }) })
+    });
+    listeners.get('DOMContentLoaded')[1]();
+    await authCallback(user);
+    profileCallback({ data: () => ({ role: 'admin' }) });
+    assert.equal(element('mainDashboard').style.display, 'block');
+    auth.currentUser = null;
+    await authCallback(null);
+    profileCallback({ data: () => ({ role: 'admin' }) });
+    assert.equal(element('mainDashboard').style.display, 'none');
+    assert.equal(element('adminUsersList').innerHTML, '');
 });

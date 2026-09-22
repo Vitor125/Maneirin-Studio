@@ -1,6 +1,6 @@
 # Contexto do Projeto: Maneirin Studio
 
-Atualizado em 18/09/2026. Este é o contexto de referência da versão principal.
+Atualizado em 22/09/2026. Este é o contexto de referência da versão principal.
 
 ## Objetivo e decisões confirmadas
 
@@ -49,16 +49,23 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/produtos/index.html`: vitrine completa.
 - `public/dashboard.html`: acesso e painel interno.
 - `public/barbeiro/index.html`: redireciona para o dashboard; preserva o atalho do PWA.
-- `public/script.js`: inicialização única do Firebase, utilitários, páginas públicas, galeria, agenda em tempo real e registro do service worker.
+- `public/script.js`: carregamento e renderização das páginas públicas, galeria e agenda em tempo real.
 - `public/dashboard.js`: autenticação, papéis, produtos, galeria, horários e calendário.
+- `public/js/firebase.js`: inicialização única de Authentication e Firestore.
+- `public/js/utils.js`: escape de HTML, URLs, datas, limites de texto e conversão segura dos documentos.
+- `public/js/media.js`: validação compartilhada dos arquivos/links de imagem e tratamento de imagens indisponíveis.
+- `public/js/calendar.js`: configuração da agenda, duração e construção do link do Google Calendar.
+- `public/js/ui.js`: menu, animações, instalação e registro do service worker compartilhados. O dashboard não importa mais `script.js` nem inicializa as consultas das páginas públicas.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/sw.js`: cache `maneirin-studio-v17`, rede primeiro, sem cache de requisições externas ao site (incluindo dados e autenticação do Firebase).
+- `public/sw.js`: cache `maneirin-studio-v18`, rede primeiro; armazena apenas caminhos estáticos enumerados, sem parâmetros. Não intercepta dados externos nem `/__/` do Firebase. Falha ao armazenar não descarta a resposta da rede.
 - `public/manifest.webmanifest`, `public/offline.html`, `public/icons/`: instalação e experiência offline.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
 - `firestore.rules`, `firestore.indexes.json`: permissões e índices (nenhum composto exigido pelas consultas atuais).
 - `tests/frontend.test.cjs`: regressões dos fluxos e utilitários, sem dados reais.
 - `tests/firestore-rules.cjs`: testes com documentos fictícios no simulador de regras Firebase.
+- `tests/service-worker.test.cjs`: regressões do cache, isolamento da autenticação e navegação offline.
+- `README.md`, `package.json`, `scripts/check.cjs`: guia de manutenção, comandos de verificação e conferência de sintaxe/imports/configurações. Não há dependências npm nem build.
 
 O arquivo local `.code-workspace` foi preservado, mas é ignorado pelo Git e pelo Hosting. `.qa/` contém artefatos locais de revisão e cópia das regras anteriores; não é publicado nem versionado. `.firebase/` e logs também são locais.
 
@@ -68,21 +75,23 @@ O arquivo local `.code-workspace` foi preservado, mas é ignorado pelo Git e pel
 
 `email`, `name`, `role`, `createdAt`. Papéis: `pending`, `barber`, `admin`. Variações históricas em maiúsculas são aceitas pelas regras e normalizadas na interface.
 
-Uma conta só pode criar seu próprio perfil como `pending`, ler seu próprio perfil e alterar o próprio nome. Apenas admin lê todos os perfis e altera cargos. A aprovação/revogação é acompanhada em tempo real. Criar perfil usa transação e nunca sobrescreve uma conta existente para `pending`.
+Uma conta só pode criar seu próprio perfil como `pending`, usando o e-mail presente no token autenticado, ler seu próprio perfil e alterar o próprio nome (1–120 caracteres). Apenas admin lê todos os perfis e aprova/revoga outras contas entre `pending` e `barber`; não pode editar e-mails, promover a admin ou apagar seu próprio perfil por essa interface/API cliente. Provisionamento de administrador é uma operação administrativa confiável fora do site. A aprovação/revogação é acompanhada em tempo real. Criar perfil usa transação e nunca sobrescreve uma conta existente para `pending`.
 
 ### `products/{id}`
 
-`name`, `description`, `image_url`, `affiliate_link`. Leitura pública; escrita por barbeiro/admin.
+`name`, `description`, `image_url`, `affiliate_link`. Leitura pública; escrita por barbeiro/admin. Regras limitam nome a 120, descrição a 2000 e link a 4096 caracteres; exigem tipos e campos previstos.
 
 ### `gallery/{id}`
 
-`image_url`, `alt`, `created_at`. Leitura pública; escrita por barbeiro/admin.
+`image_url`, `alt`, `created_at`. Leitura pública; escrita por barbeiro/admin. Regras limitam descrição a 160 caracteres e validam os campos/tipos e o formato do endereço da imagem.
 
-Uploads de produto e galeria aceitam imagens de até 600 KB, armazenadas como data URL. Esse limite deixa espaço para a expansão base64 no limite de 1 MiB por documento Firestore. Para arquivos maiores, usar uma URL HTTP/HTTPS. Não há Firebase Storage integrado para uploads.
+Uploads de produto e galeria aceitam JPG, PNG, WebP, GIF e AVIF de até 600 KB, armazenados como data URL. O navegador verifica se o arquivo realmente carrega como imagem. As regras limitam a string de imagem embutida a 820000 caracteres. Esse limite deixa espaço para a expansão base64 no limite de 1 MiB por documento Firestore. Para arquivos maiores, usar uma URL HTTP/HTTPS. Links e descrições também têm limites no formulário. Não há Firebase Storage integrado para uploads.
 
 ### `schedules/{id}`
 
 `barber_name`, `date` (`YYYY-MM-DD`), `time` (`HH:mm:00`), `is_available`; após confirmação também `client_name`, `confirmed_at`, `calendar_id`. Leitura pública somente quando disponível. Reservas com nome de cliente são privadas para barbeiros/admins. Gestão compartilhada entre barbeiros autorizados, sem separação por proprietário da vaga.
+
+Novos horários públicos só aceitam os quatro campos de disponibilidade, sem dados de cliente. A atualização permitida é confirmar uma vaga disponível, acrescentando nome (até 120 caracteres), data de confirmação e agenda; não pode alterar data/barbeiro nem sobrescrever ou republicar a reserva. Exclusão continua permitida à equipe. As regras verificam o formato da data/hora; a validação de data civil possível e futura continua no frontend, inclusive na transação. Não há validação de conflitos entre documentos distintos ou duração de serviços no servidor.
 
 As coleções históricas `photos` e `appointments` não são usadas nesta versão e não possuem acesso pelas regras atuais. Nenhum registro foi excluído durante a auditoria.
 
@@ -102,9 +111,9 @@ As coleções históricas `photos` e `appointments` não são usadas nesta vers�
 
 ## Validação e operação
 
-- `node --check public/script.js`, `node --check public/dashboard.js`, `node --check public/sw.js`.
-- `node --test tests/frontend.test.cjs`: 9 testes de agenda, fuso, calendário, escape de HTML/URL, confirmação, perfil, tamanho/link de imagem e login.
-- `node tests/firestore-rules.cjs`: 32 testes no serviço de simulação, com Firebase CLI instalado e login ativo. Não cria usuários nem reservas reais.
+- `npm run check`: sintaxe dos oito arquivos JavaScript, integridade dos imports locais e leitura das configurações JSON.
+- `npm test`: 23 testes locais de frontend e service worker, incluindo agenda, fuso, calendário, HTML/URLs, confirmação, perfil, imagens, login, troca de sessão, revogação e falhas de cache.
+- `npm run test:rules`: 65 testes no serviço de simulação, com Firebase CLI instalado e login ativo. Não cria usuários nem reservas reais.
 - `firebase deploy --only firestore:rules --project site-maneirin-studio --dry-run --non-interactive`: compilação de regras.
 - Revisão visual em 1440 px e 390 px; cadastro de foto/horário validado com Firebase simulado na máquina.
 - Publicar com `firebase deploy --only hosting,firestore:rules --project site-maneirin-studio --non-interactive`.
@@ -125,3 +134,31 @@ Uma das três entradas antigas de galeria contém um link de postagem Instagram,
 - Senha real do barbeiro e salvamento final na conta Google não foram usados nos testes. Esses passos dependem da sessão do proprietário.
 
 Antes de continuar, preserve o fluxo aprovado acima. Não reintroduza a reserva pública automática da branch antiga sem nova decisão. Atualize este documento sempre que o escopo mudar.
+
+## Histórico — revisão de segurança e manutenção, 22/09/2026
+
+**Responsável: Codex (OpenAI), assistente de desenvolvimento.** Revisão solicitada pelo proprietário, iniciada em 18/09 e retomada em 22/09. Base publicada anterior: commit `e7a1775`. Escopo: arquivos-fonte, HTML/CSS, configuração Firebase, regras, testes, cache, fluxos públicos e painel. As fotos e dados reais foram preservados.
+
+### Correções e organização
+
+1. Separados Firebase, utilitários, imagens, calendário e interface comum em cinco módulos. Removida a dependência do dashboard em relação ao script da página pública e unificada a validação de imagens de produtos/galeria.
+2. Corrigida a confiança indevida em `id` armazenado no documento: `documentData()` sempre usa o ID real do Firestore. IDs interpolados nos botões agora são escapados, como os demais textos. Regras rejeitam campos extras, inclusive IDs forjados.
+3. Reforçadas as regras de perfis, produtos, fotos e horários: tipos, campos permitidos, limites, e-mail vinculado à conta e transição única de disponibilidade para confirmação. Barradas republicação de reserva com nome de cliente e alteração de uma confirmação existente.
+4. Respostas assíncronas das listas e conexão são descartadas após troca de usuário/papel. Callbacks antigos de perfil não reabrem o painel depois do logout. Listas e formulários são limpos ao sair/perder acesso; carregamentos de fotos/produtos não gravam após mudança de sessão durante a validação da imagem.
+5. Falha de conexão/permissão na inicialização agora mostra erro com opção de tentar novamente; antes podia parecer apenas uma conta aguardando aprovação. Login não permite envios repetidos nem troca de modo durante a solicitação; a senha é limpa após a operação. Falha no logout tem mensagem explícita.
+6. URLs de imagem passam por validação ao renderizar. Uploads rejeitam SVG embutido, MIME não permitido, excesso de tamanho e arquivos que não decodificam como imagem. Links com usuário/senha embutidos são rejeitados. Tratamento de imagem quebrada passou de atributos `onerror` para listeners.
+7. Adicionados cabeçalhos de CSP, bloqueio de enquadramento por outros sites, `nosniff`, política de referência e restrição de câmera/microfone/localização. Scripts inline são bloqueados; o redirecionamento legado `/barbeiro/` usa o meta refresh existente. Estilos inline continuam permitidos por compatibilidade com o layout atual.
+8. Cache v18 inclui os novos módulos, ignora rotas internas de autenticação e evita acumular URLs arbitrárias. Erro de cota/armazenamento não força a exibição de uma versão antiga quando a rede respondeu corretamente.
+9. Falha ao abrir a janela do calendário após salvar a confirmação não é apresentada como falha da reserva. O botão de confirmar fica desabilitado durante a operação; o link de recuperação permanece no painel.
+10. Menu móvel informa seu estado, fecha com Escape e libera a rolagem ao mudar para desktop. Elementos `hidden` são respeitados mesmo quando estilos definem `display`. Ajustados carrossel de produtos e grade de contatos para evitar largura excedente em telas pequenas. Preservados as abas centrais, fotos quadradas e Instagram confirmado.
+11. Criados README de manutenção, comandos npm sem dependências e verificação de sintaxe/imports. Expandida a proteção do Git para arquivos `.env.*`. Nenhuma chave administrativa ou senha foi adicionada ao código.
+
+### Evidências e limites
+
+- 23/23 testes locais e 65/65 testes de regras passaram; os oito arquivos JavaScript e imports locais passaram na verificação de estrutura.
+- Prévia com Firebase simulado: abas, login após logout, limpeza de listas, envio de foto, menu e galeria conferidos em desktop e celular. Nenhuma conta, foto de teste ou compromisso foi criado no banco real.
+- Consulta administrativa somente de leitura em 22/09: 2 perfis (1 admin, 1 barber), 4 fotos, 1 produto e 0 horários. A contagem de três fotos registrada acima refere-se à auditoria anterior de 18/09.
+- As regras novas não migram dados antigos; registros legados continuam legíveis/removíveis conforme a permissão. Limites de leitura/custo em grande escala, armazenamento dedicado de imagens, deduplicação de horários e integração automática com Calendar exigem evolução própria. Não foi alterada a configuração de contas, OAuth, App Check, quotas ou IAM fora dos arquivos do projeto.
+- Referência técnica para validação de campos: https://firebase.google.com/docs/firestore/security/rules-fields . As conclusões desta revisão são sustentadas também pelos testes do próprio projeto; não equivalem a uma garantia de ausência de qualquer vulnerabilidade.
+
+Publicação em 22/09/2026 concluída no Firebase Hosting e nas regras Firestore, com compilação aprovada. A conferência HTTP comparou 16 arquivos publicados com a cópia local e verificou os cabeçalhos de segurança na página inicial, painel, agenda e produtos. A galeria permaneceu pública (4 registros) e os perfis continuaram bloqueados para leitura anônima (403). No navegador real, dados públicos e alternância login/cadastro carregaram sem erros de console. A revisão, os testes e este registro são versionados juntos na branch `main`; a cópia local permanece no diretório `A:\site-maneirin-studio`.

@@ -1,214 +1,20 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyChDecK-r3NqC1wgYo0OUXl0R6e6qXF4HM",
-    authDomain: "site-maneirin-studio.firebaseapp.com",
-    projectId: "site-maneirin-studio",
-    storageBucket: "site-maneirin-studio.firebasestorage.app",
-    messagingSenderId: "974534005078",
-    appId: "1:974534005078:web:1adb1420fec91092f086f7"
-};
-
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-
-const WHATSAPP_PHONE = '5521980453636';
-
-export function escapeHtml(value = '') {
-    return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-}
-
-export function buildWhatsappUrl(message) {
-    return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
-}
-
-export function formatDateBR(dateStr) {
-    if (!dateStr) return '';
-    const [year, month, day] = String(dateStr).split('-');
-    return `${day}/${month}/${year}`;
-}
-
-export function formatTime(timeStr) {
-    return String(timeStr || '').slice(0, 5);
-}
-
-export function getScheduleStart(schedule) {
-    const date = String(schedule.date || '');
-    const rawTime = String(schedule.time || '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)
-        || !/^([01]\d|2[0-3]):[0-5]\d(:00)?$/.test(rawTime)) return null;
-    const time = formatTime(rawTime);
-    // Os horários pertencem ao Studio, independentemente do fuso do visitante.
-    const start = new Date(`${date}T${time}:00-03:00`);
-    if (Number.isNaN(start.getTime())) return null;
-    const local = new Date(start.getTime() - 3 * 60 * 60 * 1000);
-    return local.toISOString().slice(0, 16) === `${date}T${time}` ? start : null;
-}
-
-export function isUpcomingSchedule(schedule) {
-    const start = getScheduleStart(schedule);
-    if (!start) return false;
-
-    return start.getTime() >= Date.now();
-}
-
-export function sortSchedulesByStart(schedules) {
-    return [...schedules].sort((first, second) => {
-        const firstStart = getScheduleStart(first)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-        const secondStart = getScheduleStart(second)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-        return firstStart - secondStart;
-    });
-}
-
-export function safeExternalUrl(value) {
-    try {
-        const url = new URL(value);
-        if (url.protocol === 'http:' || url.protocol === 'https:') {
-            return url.href;
-        }
-    } catch (error) {
-        return '#';
-    }
-
-    return '#';
-}
-
-function setupMobileMenu() {
-    const hamburger = document.querySelector('.hamburger');
-    const navLinks = document.querySelector('.nav-links');
-    const header = document.querySelector('.header');
-
-    if (!hamburger || !navLinks || !header) return;
-
-    hamburger.addEventListener('click', () => {
-        navLinks.classList.toggle('active');
-
-        const icon = hamburger.querySelector('i');
-        const isOpen = navLinks.classList.contains('active');
-        icon.classList.toggle('fa-bars', !isOpen);
-        icon.classList.toggle('fa-times', isOpen);
-        document.body.style.overflow = isOpen ? 'hidden' : 'auto';
-        header.style.background = isOpen ? 'rgba(17, 24, 39, 1)' : 'rgba(17, 24, 39, 0.85)';
-    });
-
-    navLinks.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-            navLinks.classList.remove('active');
-            const icon = hamburger.querySelector('i');
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-            document.body.style.overflow = 'auto';
-        });
-    });
-}
-
-function setupScrollHeader() {
-    const header = document.querySelector('.header');
-    if (!header) return;
-
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            header.style.background = 'rgba(17, 24, 39, 0.98)';
-            header.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-        } else {
-            header.style.background = 'rgba(17, 24, 39, 0.85)';
-            header.style.boxShadow = 'none';
-        }
-    });
-}
-
-function setupAnimations() {
-    const fadeElements = document.querySelectorAll('.about-text, .about-image, .product-card, .info-item, .section-desc, .disclaimer, .slot-card');
-
-    fadeElements.forEach(el => el.classList.add('fade-in'));
-
-    const observer = new IntersectionObserver((entries, currentObserver) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                currentObserver.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.1 });
-
-    fadeElements.forEach(el => observer.observe(el));
-
-    const heroContent = document.querySelector('.hero-content, .agenda-hero .container');
-    if (heroContent) {
-        heroContent.classList.add('fade-in');
-        setTimeout(() => heroContent.classList.add('visible'), 100);
-    }
-}
-
-function setupWhatsappLinks() {
-    document.querySelectorAll('[data-whatsapp-message]').forEach(link => {
-        const message = link.getAttribute('data-whatsapp-message') || 'Olá! Gostaria de entrar em contato com o Maneirin Studio.';
-        link.setAttribute('href', buildWhatsappUrl(message));
-        link.setAttribute('target', '_blank');
-        link.setAttribute('rel', 'noopener');
-    });
-}
-
-function setupInstallAppPrompt() {
-    let installPromptEvent = null;
-    const button = document.createElement('button');
-
-    button.type = 'button';
-    button.className = 'install-app-button';
-    button.innerHTML = '<i class="fas fa-mobile-alt"></i> Instalar App';
-    button.hidden = true;
-    document.body.appendChild(button);
-
-    window.addEventListener('beforeinstallprompt', event => {
-        event.preventDefault();
-        installPromptEvent = event;
-        button.hidden = false;
-    });
-
-    button.addEventListener('click', async () => {
-        if (!installPromptEvent) return;
-
-        installPromptEvent.prompt();
-        await installPromptEvent.userChoice;
-        installPromptEvent = null;
-        button.hidden = true;
-    });
-
-    window.addEventListener('appinstalled', () => {
-        installPromptEvent = null;
-        button.hidden = true;
-    });
-}
-
-function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) return;
-
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
-            console.error('Erro ao registrar service worker:', error);
-        });
-    });
-}
+import { collection, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { db } from './js/firebase.js';
+import { escapeHtml, buildWhatsappUrl, formatDateBR, formatTime, isUpcomingSchedule, safeExternalUrl, safeImageUrl, sortSchedulesByStart, documentData } from './js/utils.js';
+import { initCommonUI, setupAnimations } from './js/ui.js';
+import { bindImageErrors } from './js/media.js';
 
 function productCardTemplate(product) {
     const name = escapeHtml(product.name);
     const description = escapeHtml(product.description || '');
-    const imageUrl = escapeHtml(product.image_url || '');
+    const imageUrl = escapeHtml(safeImageUrl(product.image_url));
     const productUrl = escapeHtml(safeExternalUrl(product.affiliate_link));
 
     return `
         <article class="product-card fade-in">
             <div class="product-img">
                 ${imageUrl
-                    ? `<img src="${imageUrl}" alt="${name}" loading="lazy" onerror="this.remove();">`
+                    ? `<img src="${imageUrl}" alt="${name}" loading="lazy">`
                     : '<i class="fas fa-box-open"></i>'}
             </div>
             <h3>${name}</h3>
@@ -263,7 +69,7 @@ function renderGallery(photos) {
         <div class="gallery-track" tabindex="0" aria-label="Fotos dos trabalhos do Studio">
             ${photos.map(photo => `
                 <figure class="gallery-slide">
-                    <img src="${escapeHtml(photo.image_url)}" alt="${escapeHtml(photo.alt || 'Foto do Maneirin Studio')}" loading="lazy">
+                    <img src="${escapeHtml(safeImageUrl(photo.image_url))}" alt="${escapeHtml(photo.alt || 'Foto do Maneirin Studio')}" loading="lazy">
                     ${photo.alt ? `<figcaption>${escapeHtml(photo.alt)}</figcaption>` : ''}
                 </figure>
             `).join('')}
@@ -296,7 +102,7 @@ async function fetchGallery() {
     try {
         const querySnapshot = await getDocs(collection(db, 'gallery'));
         const photos = querySnapshot.docs
-            .map(photo => ({ id: photo.id, ...photo.data() }))
+            .map(photo => documentData(photo))
             .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
         renderGallery(photos);
     } catch (error) {
@@ -331,6 +137,7 @@ function renderProducts(products) {
         container.innerHTML = products.map(productCardTemplate).join('');
     }
 
+    bindImageErrors(container);
     setupAnimations();
 }
 
@@ -340,7 +147,7 @@ async function fetchProducts() {
 
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
-        const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const products = querySnapshot.docs.map(doc => documentData(doc));
         renderProducts(products);
     } catch (error) {
         console.error(error);
@@ -401,7 +208,7 @@ async function fetchSchedules() {
         let schedules = [];
         const refresh = () => renderSchedules(schedules.filter(isUpcomingSchedule));
         onSnapshot(availableQuery, snapshot => {
-            schedules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            schedules = snapshot.docs.map(doc => documentData(doc));
             refresh();
         }, error => {
             console.error(error);
@@ -416,13 +223,8 @@ async function fetchSchedules() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    setupMobileMenu();
-    setupScrollHeader();
-    setupWhatsappLinks();
-    setupInstallAppPrompt();
-    setupAnimations();
+    initCommonUI();
     fetchProducts();
     fetchGallery();
     fetchSchedules();
-    registerServiceWorker();
 });

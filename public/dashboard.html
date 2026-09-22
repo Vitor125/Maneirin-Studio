@@ -64,10 +64,11 @@
     <div class="container" id="pendingOverlay" style="display: none; justify-content: center; align-items: center; min-height: 80vh; text-align: center;">
         <div class="dash-card" style="max-width: 500px; width: 100%;">
             <i class="fas fa-clock pending-card-icon"></i>
-            <h2>Aguardando Aprovação</h2>
-            <p style="margin-top: 10px; color: var(--text-muted);">
-                Sua conta foi criada com sucesso, mas você precisa aguardar um administrador aprovar o seu acesso.
+            <h2 id="pendingTitle">Verificando acesso</h2>
+            <p id="pendingMessage" style="margin-top: 10px; color: var(--text-muted);">
+                Aguarde enquanto carregamos as permissões da sua conta.
             </p>
+            <button id="retryAccessBtn" class="btn btn-secondary" type="button" hidden>Tentar novamente</button>
         </div>
     </div>
 
@@ -93,11 +94,11 @@
                 <form id="galleryForm" class="dashboard-form">
                     <div class="form-group">
                         <label for="galleryImageFile">Enviar foto (até 600 KB)</label>
-                        <input id="galleryImageFile" type="file" accept="image/*">
+                        <input id="galleryImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
                     </div>
                     <div class="form-group">
                         <label for="galleryImageUrl">Ou usar link da foto</label>
-                        <input id="galleryImageUrl" type="url" placeholder="https://...">
+                        <input id="galleryImageUrl" maxlength="4096" type="url" placeholder="https://...">
                     </div>
                     <div class="form-group">
                         <label for="galleryAlt">Descrição da foto</label>
@@ -118,7 +119,7 @@
                 <form id="scheduleForm" class="dashboard-form">
                     <div class="form-group">
                         <label for="schedBarber">Barbeiro disponível</label>
-                        <input type="text" id="schedBarber" value="Nicolas" required>
+                        <input type="text" id="schedBarber" maxlength="120" value="Nicolas" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -141,23 +142,23 @@
                 <form id="productForm" class="dashboard-form">
                     <div class="form-group">
                         <label for="prodName">Nome do produto</label>
-                        <input type="text" id="prodName" required>
+                        <input type="text" id="prodName" maxlength="120" required>
                     </div>
                     <div class="form-group">
                         <label for="prodLink">Link de afiliado</label>
-                        <input type="url" id="prodLink" placeholder="https://..." required>
+                        <input type="url" id="prodLink" maxlength="4096" placeholder="https://..." required>
                     </div>
                     <div class="form-group">
                         <label for="prodImageFile">Foto do produto (até 600 KB)</label>
-                        <input type="file" id="prodImageFile" accept="image/*">
+                        <input type="file" id="prodImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
                     </div>
                     <div class="form-group">
                         <label for="prodImageUrl">Link da foto</label>
-                        <input type="url" id="prodImageUrl" placeholder="https://...">
+                        <input type="url" id="prodImageUrl" maxlength="4096" placeholder="https://...">
                     </div>
                     <div class="form-group">
                         <label for="prodDesc">Descrição curta</label>
-                        <textarea id="prodDesc" rows="3"></textarea>
+                        <textarea id="prodDesc" maxlength="2000" rows="3"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Salvar Produto</button>
                 </form>
