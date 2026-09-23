@@ -1,18 +1,186 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-app="barbeiro">
 <!-- Metadados, identidade visual e recursos compartilhados desta página. -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#111827">
-    <title>Área do Barbeiro - Maneirin Studio</title>
-    <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/icons/icon-192.png">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    <meta http-equiv="refresh" content="0; url=../dashboard.html">
-    <link rel="canonical" href="../dashboard.html">
+    <title>Maneirin Barbeiro — Painel</title>
+    <link rel="manifest" href="/barbeiro/manifest.webmanifest">
+    <link rel="icon" href="/barbeiro/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/barbeiro/icons/icon-192.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <p>Redirecionando para <a href="../dashboard.html">Área do Barbeiro</a>...</p>
+<body class="dashboard-page">
+
+    <!-- Navegação principal; o menu móvel é controlado por js/ui.js. -->
+    <header class="header">
+        <nav class="navbar">
+            <a href="/barbeiro/" class="logo" aria-label="Maneirin Studio">
+                <img src="/Fotos/Logo.png" alt="Maneirin Studio" style="height: 50px; width: auto;">
+            </a>
+            <button class="hamburger" type="button" aria-label="Abrir menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links">
+                <li><a href="/cliente/" target="_blank" rel="noopener">Site do cliente ↗</a></li>
+                <li><a href="/cliente/produtos/" target="_blank" rel="noopener">Produtos públicos ↗</a></li>
+                <li><a href="/cliente/agenda/" target="_blank" rel="noopener">Agenda pública ↗</a></li>
+                <li><a href="#" id="logoutBtn" style="display: none; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Login/cadastro: novas contas aguardam aprovação do master. Ocultar a tela não concede acesso. -->
+    <div class="login-overlay container" id="loginOverlay" style="display: flex; justify-content: center; align-items: center; min-height: 100vh; padding-top: 100px; padding-bottom: 40px;">
+        <div class="dash-card" style="max-width: 400px; width: 100%; text-align: center;">
+            <img src="/Fotos/Logo.png" alt="Maneirin Studio" style="height: 60px; margin-bottom: 20px;">
+            <h2 id="authTitle" style="margin-bottom: 20px;"><i class="fas fa-lock"></i> Acesso Restrito</h2>
+            <form id="authForm" class="dashboard-form" style="text-align: left;">
+                <input type="hidden" id="authMode" value="login">
+
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label for="authName">Nome Completo</label>
+                    <input type="text" id="authName" autocomplete="name" maxlength="120">
+                </div>
+
+                <div class="form-group">
+                    <label for="authEmail">E-mail</label>
+                    <input type="email" id="authEmail" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Senha</label>
+                    <input type="password" id="authPassword" autocomplete="current-password" required>
+                </div>
+                <div id="authError" class="dashboard-status error" style="display: none; margin-bottom: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 10px; border-radius: 4px; font-size: 0.9rem;"></div>
+                <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar</button>
+            </form>
+            <div class="auth-toggle">
+                <span id="authToggleText">Não tem uma conta?</span>
+                <button id="authToggleBtn" class="auth-toggle-button" type="button">Cadastre-se</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="pendingOverlay" style="display: none; justify-content: center; align-items: center; min-height: 80vh; text-align: center;">
+        <div class="dash-card" style="max-width: 500px; width: 100%;">
+            <i class="fas fa-clock pending-card-icon"></i>
+            <h2 id="pendingTitle">Verificando acesso</h2>
+            <p id="pendingMessage" style="margin-top: 10px; color: var(--text-muted);">
+                Aguarde enquanto carregamos as permissões da sua conta.
+            </p>
+            <button id="retryAccessBtn" class="btn btn-secondary" type="button" hidden>Tentar novamente</button>
+        </div>
+    </div>
+
+    <!-- Conteúdo específico da página; permissões reais são verificadas no Firestore. -->
+    <main class="dashboard-container container" id="mainDashboard" style="display: none;">
+        <div class="dashboard-heading">
+            <h1>Painel do Barbeiro</h1>
+            <p>Gerencie horários, fotos do Studio e recomendações afiliadas.</p>
+        </div>
+
+        <div class="dashboard-status" id="dashboardStatus" role="status" aria-live="polite"></div>
+        <div class="database-status" id="databaseStatus" role="status" aria-live="polite"></div>
+
+        <!-- Abas centralizadas: cada painel corresponde a uma permissão; a aba Barbeiros é exclusiva do master. -->
+        <div class="dashboard-workspace">
+            <div class="dashboard-tabs" role="tablist" aria-label="Funcionalidades do painel">
+                <button class="dashboard-tab" id="tabAgenda" type="button" role="tab" aria-controls="agendaPanel" aria-selected="true" data-dashboard-tab="agendaPanel"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda</button>
+                <button class="dashboard-tab" id="tabFotos" type="button" role="tab" aria-controls="galleryPanel" aria-selected="false" tabindex="-1" data-dashboard-tab="galleryPanel"><i class="fas fa-images" aria-hidden="true"></i> Fotos</button>
+                <button class="dashboard-tab" id="tabProdutos" type="button" role="tab" aria-controls="productsPanel" aria-selected="false" tabindex="-1" data-dashboard-tab="productsPanel"><i class="fas fa-box" aria-hidden="true"></i> Produtos</button>
+                <button class="dashboard-tab" id="tabBarbeiros" type="button" role="tab" aria-controls="adminSection" aria-selected="false" tabindex="-1" data-dashboard-tab="adminSection" hidden><i class="fas fa-users-cog" aria-hidden="true"></i> Barbeiros</button>
+            </div>
+            <p id="noAccessMessage" class="form-help" hidden>Sua conta está aprovada, mas nenhuma área foi liberada. Solicite os acessos ao administrador master.</p>
+            <div class="dashboard-panels">
+            <section class="dash-card dashboard-panel" id="galleryPanel" role="tabpanel" aria-labelledby="tabFotos" tabindex="0" hidden>
+                <h2><i class="fas fa-images"></i> Fotos do Studio</h2>
+                <!-- Foto local ou link direto; limites e decodificação são conferidos em js/media.js. -->
+                <form id="galleryForm" class="dashboard-form">
+                    <div class="form-group">
+                        <label for="galleryImageFile">Enviar foto (até 600 KB)</label>
+                        <input id="galleryImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                    </div>
+                    <div class="form-group">
+                        <label for="galleryImageUrl">Ou usar link da foto</label>
+                        <input id="galleryImageUrl" maxlength="4096" type="url" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label for="galleryAlt">Descrição da foto</label>
+                        <input id="galleryAlt" type="text" maxlength="160" placeholder="Interior do Studio">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Adicionar foto</button>
+                </form>
+                <div class="dash-list" id="dashboardGalleryList" aria-live="polite"></div>
+            </section>
+            <section class="dash-card admin-section dashboard-panel" id="adminSection" role="tabpanel" aria-labelledby="tabBarbeiros" tabindex="0" hidden>
+                <h2><i class="fas fa-users-cog"></i> Administração master</h2>
+                <p class="form-help">Aprove a equipe e escolha quais áreas cada barbeiro pode gerenciar. Alterações entram em vigor sem precisar sair da conta.</p>
+                <button id="refreshUsersBtn" class="btn btn-secondary btn-compact" type="button">Atualizar lista</button>
+                <div class="dash-list" id="adminUsersList" aria-live="polite"></div>
+            </section>
+
+            <section class="dash-card dashboard-panel" id="agendaPanel" role="tabpanel" aria-labelledby="tabAgenda" tabindex="0">
+                <h2><i class="fas fa-calendar-alt"></i> Disponibilidade</h2>
+                <p class="form-help">Após combinar pelo WhatsApp, confirme o horário abaixo. Ele sairá do site e o Google Calendar abrirá na conta maneirinbarbeiro222@gmail.com. Entre nessa conta e clique em Salvar para concluir o evento.</p>
+                <!-- Disponibilidades são públicas; dados do cliente só aparecem após confirmação privada. -->
+                <form id="scheduleForm" class="dashboard-form">
+                    <div class="form-group">
+                        <label for="schedBarber">Barbeiro disponível</label>
+                        <input type="text" id="schedBarber" maxlength="120" value="Nicolas" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="schedDate">Data</label>
+                            <input type="date" id="schedDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="schedTime">Horário</label>
+                            <input type="time" id="schedTime" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Adicionar Horário</button>
+                </form>
+
+                <div class="dash-list" id="dashboardSchedulesList" aria-live="polite"></div>
+            </section>
+
+            <section class="dash-card dashboard-panel" id="productsPanel" role="tabpanel" aria-labelledby="tabProdutos" tabindex="0" hidden>
+                <h2><i class="fas fa-box"></i> Produto Afiliado</h2>
+                <!-- Produtos são recomendações com link de afiliado, sem checkout ou pagamento no site. -->
+                <form id="productForm" class="dashboard-form">
+                    <div class="form-group">
+                        <label for="prodName">Nome do produto</label>
+                        <input type="text" id="prodName" maxlength="120" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prodLink">Link de afiliado</label>
+                        <input type="url" id="prodLink" maxlength="4096" placeholder="https://..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prodImageFile">Foto do produto (até 600 KB)</label>
+                        <input type="file" id="prodImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                    </div>
+                    <div class="form-group">
+                        <label for="prodImageUrl">Link da foto</label>
+                        <input type="url" id="prodImageUrl" maxlength="4096" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label for="prodDesc">Descrição curta</label>
+                        <textarea id="prodDesc" maxlength="2000" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Salvar Produto</button>
+                </form>
+
+                <div class="dash-list" id="dashboardProductsList" aria-live="polite"></div>
+            </section>
+        </div>
+        </div>
+    </main>
+
+    <!-- Entrada JavaScript: módulos nativos, sem build e sem scripts inline. -->
+    <script type="module" src="/dashboard.js"></script>
 </body>
 </html>

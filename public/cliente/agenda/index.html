@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-app="cliente">
+<!-- Metadados, identidade visual e recursos compartilhados desta página. -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111827">
+    <title>Agenda - Maneirin Studio</title>
+    <link rel="manifest" href="/cliente/manifest.webmanifest">
+    <link rel="icon" href="/cliente/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/cliente/icons/icon-192.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navegação principal; o menu móvel é controlado por js/ui.js. -->
+    <header class="header">
+        <nav class="navbar">
+            <a href="/cliente/" class="logo" aria-label="Maneirin Studio">
+                <img src="/Fotos/Logo.png" alt="Maneirin Studio" style="height: 50px; width: auto;">
+            </a>
+            <button class="hamburger" type="button" aria-label="Abrir menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links">
+                <li><a href="/cliente/">Início</a></li>
+                <li><a href="/cliente/#sobre">Sobre Nós</a></li>
+                <li><a href="/cliente/produtos/">Produtos</a></li>
+                <li><a href="/cliente/agenda/">Agenda</a></li>
+                <li><a href="/cliente/#contato">Contato</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Conteúdo específico da página; permissões reais são verificadas no Firestore. -->
+    <main class="agenda-page">
+        <section class="agenda-hero">
+            <div class="container">
+                <h1>Agenda</h1>
+                <p>Escolha um horário disponível e fale direto no WhatsApp para confirmar seu atendimento.</p>
+            </div>
+        </section>
+
+        <section class="agenda-container container">
+            <div id="agendaList" aria-live="polite">
+                <div class="no-slots">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Carregando horários...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <a class="floating-whatsapp" data-whatsapp-message="Olá! Vim pela agenda do Maneirin Studio e gostaria de tirar uma dúvida." aria-label="Chamar no WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <!-- Identificação pública do Studio no rodapé. -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Maneirin Studio. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Entrada JavaScript: módulos nativos, sem build e sem scripts inline. -->
+    <script type="module" src="/script.js"></script>
+</body>
+</html>

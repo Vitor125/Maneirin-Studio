@@ -4,7 +4,7 @@ Atualizado em 23/09/2026. Este é o contexto de referência da versão principal
 
 ## Objetivo e decisões confirmadas
 
-Site da barbearia Maneirin Studio: apresentação, fotos dos trabalhos, produtos afiliados, consulta de horários e painel interno. Frontend estático em HTML, CSS e JavaScript com módulos ES, Firebase Authentication, Firestore e Hosting. Não há Flask, servidor próprio nem framework de frontend.
+Dois aplicativos web da barbearia Maneirin Studio, Cliente e Barbeiro: apresentação, fotos dos trabalhos, produtos afiliados, consulta de horários e painel interno. Frontend estático em HTML, CSS e JavaScript com módulos ES, Firebase Authentication, Firestore e Hosting. Não há Flask, servidor próprio nem framework de frontend.
 
 A revisão confrontou o código local, o histórico de `main` (base `f0bdce6`) e a branch `agents/context-update-and-appointment-reminder` (`e31465b`, 13/09/2026). O contexto local dizia que a galeria havia sido cancelada; a branch alternativa tinha galeria, reserva pública transacional e outro layout. Em 18/09, o usuário decidiu explicitamente:
 
@@ -23,7 +23,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 4. Depois do acordo no WhatsApp, o barbeiro usa “Confirmar” no painel e informa o nome do cliente.
 5. Uma transação relê a vaga e só confirma se ela continua disponível e futura. Grava `client_name`, `confirmed_at`, `calendar_id` e `is_available: false`.
 6. A agenda pública recebe a atualização em tempo real e remove a vaga. Uma atualização a cada minuto também retira horários que acabaram de expirar.
-7. Abre um link de evento no Google Calendar, com duração de 60 minutos, endereço e dados do atendimento. É necessário clicar em **Salvar** no Google Calendar. O painel mantém “Adicionar à agenda” para recuperar uma janela bloqueada ou fechada.
+7. Abre um link de evento no Google Calendar direcionado à conta/agenda principal `maneirinbarbeiro222@gmail.com` (pedido confirmado em 23/09), com duração de 60 minutos, endereço e dados do atendimento. É necessário clicar em **Salvar** no Google Calendar. O painel mantém “Adicionar à agenda” para recuperar uma janela bloqueada ou fechada.
 
 **Limite importante:** não há OAuth nem chamada à API do Google Calendar. O sistema não cria eventos automaticamente, não verifica se foram salvos e não envia lembretes automáticos. Reabrir e salvar o link novamente pode duplicar o evento. Excluir um horário no painel não exclui eventos já salvos no Google.
 
@@ -34,8 +34,8 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - Galeria em carrossel no espaço antes ocupado pelo placeholder ao lado de “Sobre o Studio”. No celular fica abaixo do texto. Fotos e descrições são lidas de `gallery`.
 - Fotos da galeria exibidas em formato quadrado (1:1), como solicitado em 18/09/2026, com recorte centralizado e sem distorção no computador e no celular. Os arquivos originais são preservados.
 - Painel permite adicionar fotos por arquivo ou URL e remover fotos existentes. Não importa nem duplica as fotos já armazenadas.
-- Vitrine completa em `/produtos/`, com aviso de comissão de afiliado.
-- Agenda em `/agenda/`, com WhatsApp pré-preenchido.
+- Vitrine completa em `/cliente/produtos/`, com aviso de comissão de afiliado.
+- Agenda em `/cliente/agenda/`, com WhatsApp pré-preenchido.
 - Login e cadastro por e-mail/senha, aprovação e revogação de barbeiros pelo administrador.
 - Cadastro, listagem e remoção de produtos e horários; confirmação de horários e link de calendário.
 - Painel com menu lateral escuro e cartões claros no desktop, recuperado do histórico; visual escuro e menu superior no celular.
@@ -43,15 +43,15 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - Administração master em Barbeiros: aprovação, revogação e permissões separadas para Agenda, Fotos e Produtos, aplicadas também no servidor.
 - Carrosséis de produtos e fotos contínuos, sem setas visuais, com parte do próximo item visível; arraste/toque, teclado e pausa durante interação. Respeitam preferência por movimento reduzido.
 - Contato fecha o menu móvel e rola até a seção completa de contatos.
-- PWA com manifest, ícones, instalação quando suportada, cache do conteúdo estático e página offline. Os dados dinâmicos exigem internet.
+- Dois PWAs independentes na instalação e navegação: Cliente (`/cliente/`) e Barbeiro (`/barbeiro/`). Manifest, identidade, nome, ícones, escopo, cache e offline próprios. Compartilham os dados e regras Firebase; não são origens de segurança separadas. Os dados dinâmicos exigem internet.
 
 ## Arquivos e arquitetura
 
-- `public/index.html`: apresentação, galeria, produtos e contatos.
-- `public/agenda/index.html`: agenda pública.
-- `public/produtos/index.html`: vitrine completa.
-- `public/dashboard.html`: acesso e painel interno.
-- `public/barbeiro/index.html`: redireciona para o dashboard; preserva o atalho do PWA.
+- `public/cliente/index.html`: apresentação, galeria, produtos e contatos.
+- `public/cliente/agenda/index.html`: agenda pública.
+- `public/cliente/produtos/index.html`: vitrine completa.
+- `public/barbeiro/index.html`: acesso e painel interno.
+- `public/index.html`, `public/dashboard.html`, `public/agenda/index.html` e `public/produtos/index.html`: compatibilidade com favoritos antigos; o Hosting também redireciona essas rotas.
 - `public/script.js`: carregamento e renderização das páginas públicas, galeria e agenda em tempo real.
 - `public/dashboard.js`: autenticação, papéis, produtos, galeria, horários e calendário.
 - `public/js/firebase.js`: inicialização única de Authentication e Firestore.
@@ -64,8 +64,8 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/js/admin.js`: cartões da equipe e gravação transacional de papel/permissões.
 - `CONFIGURACAO.md`: explicação das configurações JSON, cache e contrato de acesso.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/sw.js`: cache `maneirin-studio-v20`, rede primeiro; armazena apenas caminhos estáticos enumerados, sem parâmetros. Não intercepta dados externos nem `/__/` do Firebase. Falha ao armazenar não descarta a resposta da rede.
-- `public/manifest.webmanifest`, `public/offline.html`, `public/icons/`: instalação e experiência offline.
+- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v1; Barbeiro v2), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
+- Cada pasta de aplicativo tem `manifest.webmanifest`, `offline.html` e `icons/`. O manifest da raiz preserva a identidade antiga como Cliente; os antigos ícones continuam disponíveis para compatibilidade.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
 - `firestore.rules`, `firestore.indexes.json`: permissões e índices (nenhum composto exigido pelas consultas atuais).
@@ -118,8 +118,8 @@ As coleções históricas `photos` e `appointments` não são usadas nesta vers�
 
 ## Validação e operação
 
-- `npm run check`: sintaxe dos onze arquivos JavaScript, integridade dos imports locais e leitura das configurações JSON.
-- `npm test`: 31 testes locais de frontend e service worker, incluindo agenda, fuso, calendário, HTML/URLs, confirmação, perfil, imagens, login, troca de sessão, revogação e falhas de cache.
+- `npm run check`: sintaxe dos quatorze arquivos JavaScript, integridade dos imports locais e leitura das configurações JSON.
+- `npm test`: 38 testes locais de frontend e service worker, incluindo agenda, fuso, calendário, HTML/URLs, confirmação, perfil, imagens, login, troca de sessão, revogação e falhas de cache.
 - `npm run test:rules`: 101 testes no serviço de simulação, com Firebase CLI instalado e login ativo. Não cria usuários nem reservas reais.
 - `firebase deploy --only firestore:rules --project site-maneirin-studio --dry-run --non-interactive`: compilação de regras.
 - Revisão visual em 1440 px e 390 px; cadastro de foto/horário validado com Firebase simulado na máquina.
@@ -184,3 +184,25 @@ Publicação em 22/09/2026 concluída no Firebase Hosting e nas regras Firestore
 Validação: 31 testes locais e 101 testes de regras aprovados. Verificação de sintaxe/imports/configuração aprovada para 11 arquivos JavaScript. Prévia isolada com dados fictícios confirmou salvamento de permissões, exibição exclusiva de Fotos para conta restrita, painel em tela móvel, carrosséis contínuos em ambos os sentidos, fotos quadradas, Instagram e navegação Contato. Não foram criados compromissos ou usuários de teste no Firebase real.
 
 Publicação em 23/09/2026 concluída no Firebase Hosting e regras Firestore, com compilação aprovada. A conferência comparou 19 arquivos publicados com a cópia local, verificou cabeçalhos de segurança em quatro rotas e confirmou galeria pública (4 registros) e perfis bloqueados para leitura anônima (403). No site publicado, carrosséis carregaram, Instagram apareceu no início, Contato alcançou os contatos/rodapé e o painel exibiu o login. O console da página pública não registrou erros nesta verificação. Código, comentários, testes e documentação seguem juntos na branch main do GitHub e na cópia local.
+
+## Histórico — separação dos aplicativos, 23/09/2026
+
+**Responsável: Codex (OpenAI).** A pedido do proprietário, Cliente e Barbeiro passaram a ser PWAs com identidades e escopos sem sobreposição. Cliente abre em `/cliente/` e mantém apresentação, fotos, agenda e produtos. Barbeiro abre em `/barbeiro/` e mantém login, abas e administração master.
+
+- Criados manifests, nomes, ícones C/B, instalação, caches e páginas offline próprios. Removido o atalho de barbeiro do manifest do cliente. Links públicos do painel abrem fora dele.
+- Migradas as páginas para diretórios próprios, preservando módulos comuns e regras de acesso. A página inicial e favoritos antigos redirecionam para o aplicativo correspondente.
+- Criado motor comum de service worker com cache isolado por prefixo: atualizar um app não remove os arquivos do outro; o fallback offline não captura a navegação do outro. Worker raiz antigo foi convertido em migração, e o registro novo retira o escopo raiz legado.
+- O ID original `/` permanece no Cliente para atualização das instalações existentes. Alteração de nome/ícone pode depender do navegador ou reinstalação. Instalação no sistema operacional não foi executada pelo agente.
+- Os apps permanecem na mesma origem e projeto Firebase para sincronizar horários e conteúdo. A independência é de instalação, abertura, navegação e cache; não equivale a isolamento de origem ou a bancos separados.
+- 38 testes locais aprovados, incluindo isolamento de caches, atualização, fallback, identidades e migração. Sintaxe/imports/configuração de 14 arquivos JavaScript aprovados. As regras permanecem idênticas à revisão de 101 testes já aprovada. Prévia isolada conferiu cliente/agenda, favoritos antigos, painel master e manifests vinculados sem erros de console.
+
+Referência para os escopos sem sobreposição: https://web.dev/articles/building-multiple-pwas-on-the-same-domain .
+
+### Complementos solicitados na mesma revisão
+
+- Conferidos novamente carrosséis contínuos sem setas visuais, próximo item parcialmente visível, Instagram no início e Contato até a seção de contatos. Essas funcionalidades da revisão anterior foram mantidas dentro de Cliente.
+- Agenda Google passou a usar `maneirinbarbeiro222@gmail.com` em `src` e `authuser`, substituindo a agenda de grupo anterior. Teste valida os dois parâmetros. A tela informa qual conta deve estar aberta e mantém a instrução de Salvar. Não foi acessada a conta Google real nem criado evento de teste.
+- Código novo mantém comentários de responsabilidades, migração, escopo, cache e calendário. Configurações JSON continuam documentadas em CONFIGURACAO.md.
+- Revalidação HTTP ampliada às rotas sem extensão e manifests. Cache do Barbeiro atualizado para v2 após a alteração de calendário.
+
+Publicação final desta revisão concluída em 23/09/2026 no Firebase Hosting. Conferência HTTP: 36 arquivos publicados idênticos à cópia local, nove redirecionamentos antigos corretos, tipos de conteúdo dos manifests/workers e cabeçalhos verificados para os dois apps. No navegador publicado, Cliente carregou seus dados e carrosséis sem erros de console, Contato alcançou a seção e o rodapé, e Barbeiro exibiu seu login próprio. A primeira abertura com cache legado exigiu recarregamento; depois carregou a entrada nova. A versão foi preparada para sincronização na main junto com testes, comentários e este histórico.

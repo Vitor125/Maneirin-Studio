@@ -61,6 +61,8 @@ test('calendário preserva data, duração e nome com caracteres especiais', () 
     assert.equal(url.searchParams.get('dates'), '20310101T023000Z/20310101T033000Z');
     assert.equal(url.searchParams.get('text'), 'Maneirin Studio - José & Ana');
     assert.equal(url.searchParams.get('ctz'), 'America/Sao_Paulo');
+    assert.equal(url.searchParams.get('authuser'), 'maneirinbarbeiro222@gmail.com');
+    assert.equal(url.searchParams.get('src'), 'maneirinbarbeiro222@gmail.com');
 });
 
 test('links e textos de produtos não executam HTML recebido do banco', () => {

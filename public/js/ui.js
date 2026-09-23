@@ -93,7 +93,7 @@ function setupInstallAppPrompt() {
 
     button.type = 'button';
     button.className = 'install-app-button';
-    button.innerHTML = '<i class="fas fa-mobile-alt"></i> Instalar App';
+    button.innerHTML = '<i class="fas fa-mobile-alt"></i> Instalar ' + (document.documentElement.dataset.app === 'barbeiro' ? 'Barbeiro' : 'Cliente');
     button.hidden = true;
     document.body.appendChild(button);
 
@@ -123,7 +123,14 @@ function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
 
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
+        // O escopo é explícito e não se sobrepõe ao outro aplicativo.
+        const app = document.documentElement.dataset.app;
+        if (!['cliente', 'barbeiro'].includes(app)) return;
+        navigator.serviceWorker.register('/' + app + '/sw.js', { scope: '/' + app + '/', updateViaCache: 'none' }).then(async () => {
+            // Retira apenas a instalação técnica antiga de escopo raiz, preservando os dois apps.
+            const legacy = await navigator.serviceWorker.getRegistration('/');
+            if (legacy && new URL(legacy.scope).pathname === '/') await legacy.unregister();
+        }).catch(error => {
             console.error('Erro ao registrar service worker:', error);
         });
     });

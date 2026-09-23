@@ -19,7 +19,7 @@ for (const file of files) {
         }
     }
 }
-for (const file of ['firebase.json', 'firestore.indexes.json', '.firebaserc', 'public/manifest.webmanifest']) {
+for (const file of ['firebase.json', 'firestore.indexes.json', '.firebaserc', 'public/manifest.webmanifest', 'public/cliente/manifest.webmanifest', 'public/barbeiro/manifest.webmanifest']) {
     JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8'));
 }
 console.log(`${files.length} arquivos JavaScript e configurações verificados.`);
