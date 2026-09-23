@@ -64,7 +64,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/js/admin.js`: cartões da equipe e gravação transacional de papel/permissões.
 - `CONFIGURACAO.md`: explicação das configurações JSON, cache e contrato de acesso.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v1; Barbeiro v2), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
+- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v2; Barbeiro v3), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
 - Cada pasta de aplicativo tem `manifest.webmanifest`, `offline.html` e `icons/`. O manifest da raiz preserva a identidade antiga como Cliente; os antigos ícones continuam disponíveis para compatibilidade.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
@@ -206,3 +206,9 @@ Referência para os escopos sem sobreposição: https://web.dev/articles/buildin
 - Revalidação HTTP ampliada às rotas sem extensão e manifests. Cache do Barbeiro atualizado para v2 após a alteração de calendário.
 
 Publicação final desta revisão concluída em 23/09/2026 no Firebase Hosting. Conferência HTTP: 36 arquivos publicados idênticos à cópia local, nove redirecionamentos antigos corretos, tipos de conteúdo dos manifests/workers e cabeçalhos verificados para os dois apps. No navegador publicado, Cliente carregou seus dados e carrosséis sem erros de console, Contato alcançou a seção e o rodapé, e Barbeiro exibiu seu login próprio. A primeira abertura com cache legado exigiu recarregamento; depois carregou a entrada nova. A versão foi preparada para sincronização na main junto com testes, comentários e este histórico.
+
+## Histórico — localização confirmada, 23/09/2026
+
+**Responsável: Codex (OpenAI).** O proprietário confirmou https://maps.app.goo.gl/23gyeFuJq7AkSn9i6 como referência oficial do Maneirin Studio. A consulta ao perfil no Maps confirmou R. Nilópolis, 352 - Éden, São João de Meriti - RJ, 25535-050. O contato do site já usava esse link; acrescentado o nome do estabelecimento junto ao endereço. Os novos links de evento incluem o nome do Studio no local e o link exato do Maps na descrição, mantendo a conta maneirinbarbeiro222@gmail.com. Eventos já salvos no Google não são alterados. Caches atualizados para Cliente v2 e Barbeiro v3.
+
+Validação: 38 testes locais e verificação dos 14 arquivos JavaScript aprovados. Publicação no Firebase Hosting concluída; os quatro arquivos alterados de aplicação foram comparados com a cópia local e estão idênticos.

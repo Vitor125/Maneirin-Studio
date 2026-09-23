@@ -1,7 +1,9 @@
 import { getScheduleStart } from './utils.js';
 
 const APPOINTMENT_DURATION_MINUTES = 60;
-const STUDIO_ADDRESS = 'R. Nilópolis, 352 - Éden, São João de Meriti - RJ, 25535-050';
+// Local confirmado no perfil do Studio no Maps; o link evita confusão com uma busca por rua.
+const STUDIO_MAPS_URL = 'https://maps.app.goo.gl/23gyeFuJq7AkSn9i6';
+const STUDIO_ADDRESS = 'Maneirin Studio — R. Nilópolis, 352 - Éden, São João de Meriti - RJ, 25535-050';
 // Conta e agenda principal solicitadas pelo proprietário; não é uma credencial de acesso.
 export const GOOGLE_CALENDAR_ID = 'maneirinbarbeiro222@gmail.com';
 const GOOGLE_CALENDAR_TIMEZONE = 'America/Sao_Paulo';
@@ -31,7 +33,7 @@ export function buildGoogleCalendarUrl(schedule, clientName) {
         src: GOOGLE_CALENDAR_ID,
         text: `Maneirin Studio - ${clientName}`,
         dates: `${toGoogleCalendarDate(start)}/${toGoogleCalendarDate(end)}`,
-        details: `Cliente: ${clientName}\nBarbeiro: ${schedule.barber_name || 'Maneirin Studio'}\nHorário confirmado pela dashboard do Maneirin Studio.`,
+        details: `Cliente: ${clientName}\nBarbeiro: ${schedule.barber_name || 'Maneirin Studio'}\nHorário confirmado pela dashboard do Maneirin Studio.\nLocalização: ${STUDIO_MAPS_URL}`,
         location: STUDIO_ADDRESS,
         ctz: GOOGLE_CALENDAR_TIMEZONE
     });

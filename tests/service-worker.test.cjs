@@ -64,7 +64,7 @@ for (const app of ['cliente', 'barbeiro']) {
         const context = vm.createContext({
             importScripts() {},
             caches: {
-                keys: async () => ['maneirin-cliente-v0', 'maneirin-barbeiro-v0', 'maneirin-cliente-v1', 'maneirin-barbeiro-v2'],
+                keys: async () => ['maneirin-cliente-v0', 'maneirin-barbeiro-v0', 'maneirin-cliente-v2', 'maneirin-barbeiro-v3'],
                 delete: async key => deleted.push(key),
                 open: async () => ({ addAll: async paths => precached.push(...paths) })
             },
@@ -98,7 +98,7 @@ test('manifests têm identidades diferentes e escopos sem sobreposição', () =>
 test('worker legado remove apenas seus caches e se desregistra', async () => {
     const handlers = {}, deleted = []; let unregistered = false, pending;
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/sw.js'), 'utf8'), {
-        caches: { keys: async () => ['maneirin-studio-v20', 'maneirin-cliente-v1', 'maneirin-barbeiro-v1'], delete: async key => deleted.push(key) },
+        caches: { keys: async () => ['maneirin-studio-v20', 'maneirin-cliente-v2', 'maneirin-barbeiro-v1'], delete: async key => deleted.push(key) },
         self: { addEventListener: (type, handler) => { handlers[type] = handler; }, registration: { unregister: async () => { unregistered = true; } } }
     });
     handlers.activate({ waitUntil: value => { pending = value; } }); await pending;
