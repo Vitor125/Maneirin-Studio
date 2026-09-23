@@ -19,7 +19,7 @@ As configurações sem suporte a comentários estão explicadas em [CONFIGURACAO
 | `public/js/media.js` | Validação e carregamento de imagens |
 | `public/js/calendar.js` | Link preenchido do Google Calendar |
 | `public/js/ui.js` | Menu, animações, instalação e registro do service worker |
-| `public/js/carousel.js` | Faixas contínuas, arraste, teclado e pausa acessível |
+| `public/js/carousel.js` | Itens únicos, arraste, teclado e indicação de conteúdo fora da tela |
 | `public/js/permissions.js` | Contrato das permissões Agenda, Fotos e Produtos |
 | `public/js/admin.js` | Cartões da equipe e gravação transacional dos acessos |
 | `public/styles.css` | Estilos organizados por seção e tamanho de tela |
@@ -30,6 +30,8 @@ As configurações sem suporte a comentários estão explicadas em [CONFIGURACAO
 | `tests/` | Regressões locais e simulação das regras |
 
 O painel não importa a página pública. Ambos reutilizam os módulos de `public/js/`, que não iniciam telas por conta própria. As páginas chamam `initCommonUI()` na inicialização.
+
+Os carrosséis mostram cada foto/produto uma única vez, com rolagem manual. A dica de deslizar e o recorte nas bordas só indicam conteúdo real fora da tela. Sombras e uma oscilação vertical suave criam o efeito flutuante; a oscilação pausa durante interação e respeita a preferência de movimento reduzido.
 
 ## Executar e verificar
 

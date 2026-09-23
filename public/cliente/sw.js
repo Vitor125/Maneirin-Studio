@@ -1,7 +1,7 @@
 // Configuração exclusiva do aplicativo cliente; o motor comum não mistura seus caches.
 self.APP_CONFIG = {
   "prefix": "maneirin-cliente-",
-  "version": "v2",
+  "version": "v5",
   "scope": "/cliente/",
   "offline": "/cliente/offline.html",
   "shell": [

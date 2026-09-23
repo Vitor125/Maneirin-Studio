@@ -41,7 +41,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - Painel com menu lateral escuro e cartões claros no desktop, recuperado do histórico; visual escuro e menu superior no celular.
 - Área central organizada em abas **Agenda**, **Fotos**, **Produtos** e **Barbeiros** (somente admin), conforme pedido de 18/09/2026. Uma funcionalidade fica visível por vez; trocar de aba preserva os formulários. Agenda é a aba inicial quando autorizada; caso contrário, abre a primeira área permitida. As setas, Home e End permitem navegação por teclado; alterações de acesso ocultam áreas indisponíveis e limpam formulários/listas. No celular as abas se organizam em duas colunas.
 - Administração master em Barbeiros: aprovação, revogação e permissões separadas para Agenda, Fotos e Produtos, aplicadas também no servidor.
-- Carrosséis de produtos e fotos contínuos, sem setas visuais, com parte do próximo item visível; arraste/toque, teclado e pausa durante interação. Respeitam preferência por movimento reduzido.
+- Carrosséis de produtos e fotos sem duplicações e sem avanço horizontal automático. Arraste/toque e teclado percorrem os itens únicos; dica e recorte lateral aparecem apenas quando há conteúdo fora da tela. Flutuação vertical pausa durante interação e respeita movimento reduzido.
 - Contato fecha o menu móvel e rola até a seção completa de contatos.
 - Dois PWAs independentes na instalação e navegação: Cliente (`/cliente/`) e Barbeiro (`/barbeiro/`). Manifest, identidade, nome, ícones, escopo, cache e offline próprios. Compartilham os dados e regras Firebase; não são origens de segurança separadas. Os dados dinâmicos exigem internet.
 
@@ -59,12 +59,12 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/js/media.js`: validação compartilhada dos arquivos/links de imagem e tratamento de imagens indisponíveis.
 - `public/js/calendar.js`: configuração da agenda, duração e construção do link do Google Calendar.
 - `public/js/ui.js`: menu, animações, instalação e registro do service worker compartilhados. O dashboard não importa mais `script.js` nem inicializa as consultas das páginas públicas.
-- `public/js/carousel.js`: rolagem contínua, cópias apenas visuais, interação e limpeza de observadores.
+- `public/js/carousel.js`: rolagem manual, itens únicos, indicação de conteúdo oculto, interação e limpeza de observadores.
 - `public/js/permissions.js`: contrato compartilhado de acesso por funcionalidade.
 - `public/js/admin.js`: cartões da equipe e gravação transacional de papel/permissões.
 - `CONFIGURACAO.md`: explicação das configurações JSON, cache e contrato de acesso.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v2; Barbeiro v3), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
+- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v5; Barbeiro v3), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
 - Cada pasta de aplicativo tem `manifest.webmanifest`, `offline.html` e `icons/`. O manifest da raiz preserva a identidade antiga como Cliente; os antigos ícones continuam disponíveis para compatibilidade.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
@@ -212,3 +212,22 @@ Publicação final desta revisão concluída em 23/09/2026 no Firebase Hosting. 
 **Responsável: Codex (OpenAI).** O proprietário confirmou https://maps.app.goo.gl/23gyeFuJq7AkSn9i6 como referência oficial do Maneirin Studio. A consulta ao perfil no Maps confirmou R. Nilópolis, 352 - Éden, São João de Meriti - RJ, 25535-050. O contato do site já usava esse link; acrescentado o nome do estabelecimento junto ao endereço. Os novos links de evento incluem o nome do Studio no local e o link exato do Maps na descrição, mantendo a conta maneirinbarbeiro222@gmail.com. Eventos já salvos no Google não são alterados. Caches atualizados para Cliente v2 e Barbeiro v3.
 
 Validação: 38 testes locais e verificação dos 14 arquivos JavaScript aprovados. Publicação no Firebase Hosting concluída; os quatro arquivos alterados de aplicação foram comparados com a cópia local e estão idênticos.
+
+## Histórico — carrosséis flutuantes, 23/09/2026
+
+**Responsável: Codex (OpenAI).** A pedido do proprietário, fotos e produtos receberam oscilação vertical suave, sombras e desaparecimento gradual nas extremidades. Mantido o deslocamento horizontal infinito e o próximo item parcialmente visível. A flutuação pausa durante hover/foco e é desativada com preferência por movimento reduzido. Cópias herdam a fase da animação do original para preservar a continuidade. Adicionado espaço vertical para não cortar cartões e sombras; cache Cliente atualizado para v3.
+
+Verificação de sintaxe/imports dos 14 arquivos JavaScript e configurações aprovada. Publicado no Firebase Hosting.
+
+## Histórico — indicação de mais fotos, 23/09/2026
+
+**Responsável: Codex (OpenAI).** Adicionada abaixo da galeria a indicação discreta 'Deslize para ver mais fotos', acompanhada de pontos decorativos, sem setas. Só aparece quando há ao menos duas fotos originais válidas; cópias do carrossel não entram na contagem. Layout ajustado para posicionar a indicação abaixo da faixa. Cache Cliente v4. Sintaxe/imports verificados e alteração publicada no Firebase Hosting. Sincronização GitHub permanece aguardando autorização solicitada anteriormente.
+
+
+## Histórico — conteúdo sem repetição, 23/09/2026
+
+**Responsável: Codex (OpenAI).** Correção solicitada: removida a clonagem de fotos/produtos e o avanço horizontal automático. Cada registro aparece uma única vez. Mantidos arraste, toque, teclado, sombras e flutuação. Próximo item parcial e dica de deslizar indicam apenas conteúdo real fora da tela; faixa sem overflow fica centralizada e sem dica. Extremidades esmaecem somente onde há conteúdo oculto. Esta decisão substitui o loop infinito anterior. Cache Cliente v5. GitHub segue aguardando a autorização anterior.
+
+## Histórico — documentação e sincronização autorizada, 23/09/2026
+
+**Responsável: Codex (OpenAI).** Proprietário autorizou explicitamente atualizar a máquina e comitar todas as alterações no GitHub. Revisados os comentários dos módulos, regras, páginas, estilos e testes. Completadas as explicações das pistas de navegação, arraste, teclado e limpeza do carrossel. README, configuração e resumo atual do contexto agora descrevem itens únicos e cache Cliente v5; JSON é explicado em CONFIGURACAO.md para preservar sua validade. Os registros históricos anteriores permanecem como histórico. Cópia local em A:\site-maneirin-studio. Validação: 14 arquivos JavaScript/configurações e 38 testes locais aprovados; regras Firestore não alteradas nesta revisão.

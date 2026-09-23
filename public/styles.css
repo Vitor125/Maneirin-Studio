@@ -1196,6 +1196,7 @@ footer p {
 .about-gallery {
     align-items: center;
     display: flex;
+    flex-direction: column;
     gap: 12px;
     min-width: 0;
 }
@@ -1210,6 +1211,7 @@ footer p {
 
 .gallery-track {
     display: flex;
+    width: 100%;
     flex: 1;
     min-width: 0;
     overflow-x: auto;
@@ -1220,6 +1222,22 @@ footer p {
 .gallery-track::-webkit-scrollbar {
     display: none;
 }
+
+/* Pista permanente de navegação, sem botões de seta nem contagem das cópias do loop. */
+.gallery-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: -12px 0 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+}
+.gallery-hint-dots { display: inline-flex; gap: 5px; align-items: center; }
+.gallery-hint-dots span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.gallery-hint-dots span:nth-child(2) { width: 7px; height: 7px; color: var(--accent-color); }
 
 .gallery-slide {
     flex: 0 0 84%;
@@ -1560,6 +1578,35 @@ footer p {
 .loop-carousel:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 5px; }
 .loop-carousel img { user-select: none; -webkit-user-drag: none; }
 .loop-carousel .product-card { opacity: 1; transform: none; }
+
+/* Espaço para sombras e oscilação suave: os cartões parecem suspensos sobre a página. */
+.loop-carousel {
+    padding-top: 24px;
+    padding-bottom: 36px;
+}
+/* Só esmaece a extremidade que ainda tem itens fora da tela. */
+.loop-carousel[data-more-after="true"] { mask-image: linear-gradient(to right, #000 97%, transparent); }
+.loop-carousel[data-more-before="true"] { mask-image: linear-gradient(to right, transparent, #000 3%); }
+.loop-carousel[data-more-before="true"][data-more-after="true"] { mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent); }
+.loop-carousel[data-overflow="false"] { justify-content: center; cursor: default; }
+.loop-carousel > .product-card,
+.loop-carousel > .gallery-slide {
+    box-shadow: 0 16px 26px -12px rgba(0, 0, 0, 0.55),
+                0 2px 8px rgba(0, 0, 0, 0.16);
+    animation: carousel-float 7s ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s);
+}
+@keyframes carousel-float {
+    0%, 100% { transform: translateY(5px); }
+    50% { transform: translateY(-7px); }
+}
+/* Facilita clicar e ler durante a interação sem reiniciar a posição da animação. */
+.loop-carousel:hover > *,
+.loop-carousel:focus-within > * { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+    .loop-carousel > .product-card,
+    .loop-carousel > .gallery-slide { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
 }

@@ -1,70 +1,23 @@
-// Três faixas equivalentes permitem atravessar as extremidades sem salto visual.
-// As cópias são apenas de apresentação; os itens originais mantêm o acesso por teclado.
-export function setupInfiniteCarousel(track) {
-    let originals = [...track.children];
-    let span = 0;
-    let frame;
-    let lastTime = 0;
-    let travel = 0;
-    let pausedUntil = 0;
-    let hovered = false;
-    let focused = false;
+// Faixa de itens únicos: rolagem manual e pistas visuais apenas onde há conteúdo fora da tela.
+export function setupCarousel(track) {
     let pointer = null;
     let dragged = false;
-    let previousWidth = 0;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const pause = () => { pausedUntil = performance.now() + 4500; };
-
-    // Recalcula as três faixas após redimensionamento ou remoção de uma imagem quebrada.
+    const hint = track.parentElement.querySelector('[data-carousel-hint]');
+    // Recalcula as pistas após rolagem, mudança de largura ou remoção de uma foto inválida.
+    // A tolerância evita mostrar uma dica por arredondamento de poucos pixels.
     const refresh = () => {
-        originals = originals.filter(item => item.parentElement === track);
-        track.querySelectorAll('[data-carousel-copy]').forEach(item => item.remove());
-        span = 0;
-        if (!originals.length || !track.clientWidth) return;
-        const gap = parseFloat(getComputedStyle(track).gap) || 0;
-        const step = originals[0].getBoundingClientRect().width + gap;
-        const repeats = Math.max(1, Math.ceil((track.clientWidth + step) / (step * originals.length)));
-        const copy = item => {
-            const clone = item.cloneNode(true);
-            clone.dataset.carouselCopy = 'true';
-            clone.setAttribute('aria-hidden', 'true');
-            clone.querySelectorAll('a, button, [tabindex]').forEach(el => { el.tabIndex = -1; });
-            return clone;
-        };
-        const side = () => {
-            const fragment = document.createDocumentFragment();
-            for (let i = 0; i < repeats; i++) originals.forEach(item => fragment.append(copy(item)));
-            return fragment;
-        };
-        track.prepend(side());
-        for (let i = 1; i < repeats; i++) originals.forEach(item => track.append(copy(item)));
-        track.append(side());
-        span = step * originals.length * repeats;
-        track.scrollLeft = span;
+        const remaining = track.scrollWidth - track.clientWidth;
+        const overflowing = remaining > 2;
+        track.dataset.overflow = String(overflowing);
+        track.dataset.moreBefore = String(overflowing && track.scrollLeft > 2);
+        track.dataset.moreAfter = String(overflowing && track.scrollLeft < remaining - 2);
+        if (hint) hint.hidden = !overflowing;
     };
-    // Reposiciona na faixa equivalente central sem mudar o conteúdo que está visível.
-    const normalize = () => {
-        if (!span) return;
-        if (track.scrollLeft < span - 1) track.scrollLeft += span;
-        else if (track.scrollLeft >= 2 * span) track.scrollLeft -= span;
-    };
-    // Mantém velocidade constante; respeita foco, interação e preferência por menos movimento.
-    const animate = time => {
-        if (!track.isConnected) { destroy(); return; }
-        const elapsed = Math.min(time - (lastTime || time), 50);
-        lastTime = time;
-        if (span && !hovered && !focused && !pointer && !document.hidden && !reducedMotion.matches && time > pausedUntil) {
-            travel += elapsed * 0.028;
-            const pixels = Math.floor(travel);
-            travel -= pixels;
-            track.scrollLeft += pixels;
-            normalize();
-        }
-        frame = requestAnimationFrame(animate);
-    };
-    // No celular o navegador controla o toque; no mouse, convertemos o arraste em rolagem.
+    // Desencontra a oscilação vertical dos cartões; o CSS respeita movimento reduzido.
+    [...track.children].forEach((item, index) => item.style.setProperty('--float-delay', `${index * -1.7}s`));
+    // Toque usa a rolagem nativa; mouse pode arrastar sem abrir links por acidente.
     const onDown = event => {
-        pause();
+        if (event.button !== 0) return;
         dragged = false;
         pointer = { id: event.pointerId, x: event.clientX, mouse: event.pointerType === 'mouse' };
     };
@@ -76,42 +29,32 @@ export function setupInfiniteCarousel(track) {
         track.setPointerCapture(pointer.id);
         track.scrollLeft += delta;
         pointer.x = event.clientX;
-        pause();
         event.preventDefault();
     };
-    const onUp = () => { pointer = null; pause(); };
-    // Arrastar um produto não deve abrir acidentalmente seu link de compra.
-    const onClick = event => { if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; } };
+    const onUp = () => { pointer = null; };
+    // O clique emitido ao terminar um arraste não deve abrir o link de compra.
+    const onClick = event => {
+        if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; }
+    };
+    // Só intercepta setas com foco na faixa; os links internos mantêm seu teclado nativo.
     const onKey = event => {
         if (event.target !== track || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         event.preventDefault();
-        pause();
-        track.scrollLeft += (event.key === 'ArrowRight' ? 1 : -1) * (originals[0]?.getBoundingClientRect().width || 200);
+        track.scrollLeft += (event.key === 'ArrowRight' ? 1 : -1) * (track.firstElementChild?.getBoundingClientRect().width || 200);
     };
-    const onEnter = () => { hovered = true; };
-    const onLeave = () => { hovered = false; };
-    const onFocus = () => { focused = true; };
-    const onBlur = event => { focused = track.contains(event.relatedTarget); pause(); };
     const preventDrag = event => event.preventDefault();
-    const events = { scroll: normalize, pointerdown: onDown, pointermove: onMove, pointerenter: onEnter,
-        pointerleave: onLeave, click: onClick, keydown: onKey, focusin: onFocus, focusout: onBlur,
-        wheel: pause, dragstart: preventDrag };
+    const events = { scroll: refresh, pointerdown: onDown, pointermove: onMove,
+        pointerup: onUp, pointercancel: onUp, lostpointercapture: onUp,
+        pointerleave: event => { if (!track.hasPointerCapture(event.pointerId)) onUp(); },
+        click: onClick, keydown: onKey, dragstart: preventDrag };
     Object.entries(events).forEach(([name, handler]) => track.addEventListener(name, handler));
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
-    const observer = new ResizeObserver(() => {
-        if (track.clientWidth !== previousWidth) { previousWidth = track.clientWidth; refresh(); }
-    });
-    // Libera observadores e eventos quando a faixa deixa a página.
+    const observer = new ResizeObserver(refresh);
+    observer.observe(track);
+    // Chamado quando a galeria fica vazia, para liberar o observador e os eventos.
     const destroy = () => {
-        cancelAnimationFrame(frame);
         observer.disconnect();
         Object.entries(events).forEach(([name, handler]) => track.removeEventListener(name, handler));
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onUp);
     };
-    observer.observe(track);
     refresh();
-    frame = requestAnimationFrame(animate);
     return { refresh, destroy };
 }

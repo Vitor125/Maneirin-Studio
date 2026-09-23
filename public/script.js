@@ -2,7 +2,7 @@ import { collection, getDocs, query, where, onSnapshot } from "https://www.gstat
 import { db } from './js/firebase.js';
 import { escapeHtml, buildWhatsappUrl, formatDateBR, formatTime, isUpcomingSchedule, safeExternalUrl, safeImageUrl, sortSchedulesByStart, documentData } from './js/utils.js';
 import { initCommonUI, setupAnimations } from './js/ui.js';
-import { setupInfiniteCarousel } from './js/carousel.js';
+import { setupCarousel } from './js/carousel.js';
 import { bindImageErrors } from './js/media.js';
 
 /** Gera o cartão público com textos escapados e links/imagens filtrados. */
@@ -26,7 +26,7 @@ function productCardTemplate(product) {
     `;
 }
 
-/** Monta a galeria contínua e retira fotos que falham, preservando o loop após a remoção. */
+/** Monta a galeria com fotos únicas e retira imagens que falham. */
 function renderGallery(photos) {
     const container = document.querySelector('[data-gallery-list]');
     if (!container) return;
@@ -45,15 +45,19 @@ function renderGallery(photos) {
                 </figure>
             `).join('')}
         </div>
+        <p class="gallery-hint" data-carousel-hint hidden>
+            <span class="gallery-hint-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            <span>Deslize para ver mais fotos</span>
+        </p>
     `;
     const track = container.querySelector('.gallery-track');
-    const carousel = setupInfiniteCarousel(track);
+    const carousel = setupCarousel(track);
     const updateControls = () => {
+        // Cada foto aparece uma única vez.
         const count = container.querySelectorAll('.gallery-slide').length;
-
-        if (!count) container.innerHTML = '<p class="empty-message">As fotos do Studio estarão disponíveis em breve.</p>';
+        if (!count) { carousel.destroy(); container.innerHTML = '<p class="empty-message">As fotos do Studio estarão disponíveis em breve.</p>'; }
     };
-    container.querySelectorAll('.gallery-slide:not([data-carousel-copy]) img').forEach(img => {
+    container.querySelectorAll('.gallery-slide img').forEach(img => {
         const removeBrokenPhoto = () => {
             img.closest('.gallery-slide')?.remove();
             carousel.refresh();
@@ -97,8 +101,9 @@ function renderProducts(products) {
             <div class="products-carousel-track loop-carousel" tabindex="0" role="region" aria-label="Produtos recomendados. Deslize ou use as setas do teclado.">
                 ${products.map(productCardTemplate).join('')}
             </div>
+            <p class="gallery-hint" data-carousel-hint hidden>Deslize para ver mais produtos</p>
         `;
-        setupInfiniteCarousel(container.querySelector('.products-carousel-track'));
+        setupCarousel(container.querySelector('.products-carousel-track'));
     } else {
         container.innerHTML = products.map(productCardTemplate).join('');
     }

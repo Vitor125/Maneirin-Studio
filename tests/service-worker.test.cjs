@@ -64,7 +64,10 @@ for (const app of ['cliente', 'barbeiro']) {
         const context = vm.createContext({
             importScripts() {},
             caches: {
-                keys: async () => ['maneirin-cliente-v0', 'maneirin-barbeiro-v0', 'maneirin-cliente-v2', 'maneirin-barbeiro-v3'],
+                // Usa a versão atual declarada pelo worker, preservando também o cache do outro app.
+                keys: async () => ['maneirin-cliente-v0', 'maneirin-barbeiro-v0',
+                    context.self.APP_CONFIG.prefix + context.self.APP_CONFIG.version,
+                    'maneirin-' + (app === 'cliente' ? 'barbeiro' : 'cliente') + '-current'],
                 delete: async key => deleted.push(key),
                 open: async () => ({ addAll: async paths => precached.push(...paths) })
             },
