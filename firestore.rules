@@ -1,56 +1,81 @@
+// Autorização do servidor: os controles da interface não substituem estas regras.
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
+    // Exige uma identidade autenticada pelo Firebase.
     function isAuthenticated() {
       return request.auth != null;
     }
     
+    // Lê o papel no perfil protegido; o cliente não pode promover a própria conta.
     function getUserRole() {
       let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return doc != null ? doc.data.role : 'none';
     }
     
+    // O admin existente é o master; aceita as variações de caixa legadas.
     function isAdmin() {
       return isAuthenticated() && getUserRole() in ['admin', 'Admin', 'ADMIN'];
     }
     
-    function isBarberOrAdmin() {
-      return isAuthenticated() && getUserRole() in ['admin', 'Admin', 'ADMIN', 'barber', 'Barber', 'BARBER'];
+    // Compatibilidade: barbeiros antigos sem mapa mantêm o acesso anterior até o master editar.
+    // A presença de um mapa torna cada concessão explícita; campo ausente significa bloqueado.
+    function hasFeature(feature) {
+      let profile = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAdmin() || (isAuthenticated() && profile != null
+        && profile.data.role in ['barber', 'Barber', 'BARBER']
+        && (!('permissions' in profile.data)
+          || (profile.data.permissions is map && profile.data.permissions.get(feature, false) == true)));
     }
 
+    // Um master salva sempre um mapa completo de booleanos, sem campos arbitrários.
+    function validPermissions(data) {
+      return !('permissions' in data) || (data.permissions is map
+        && data.permissions.keys().hasAll(['schedules', 'gallery', 'products'])
+        && data.permissions.keys().hasOnly(['schedules', 'gallery', 'products'])
+        && data.permissions.schedules is bool && data.permissions.gallery is bool && data.permissions.products is bool);
+    }
+
+    // Impõe tipo e comprimento de strings.
     function text(value, min, max) {
       return value is string && value.size() >= min && value.size() <= max;
     }
 
+    // Restringe links a HTTP/HTTPS sem credenciais e com tamanho limitado.
     function externalUrl(value) {
       return text(value, 8, 4096) && value.matches('https?://[^\\s@/]+(/[^\\s]*)?');
     }
 
+    // Aceita link externo ou imagem raster base64 dentro do limite do documento.
     function imageUrl(value) {
       return externalUrl(value) || (text(value, 1, 820000)
         && value.matches('data:image/(png|jpeg|webp|gif|avif);base64,[A-Za-z0-9+/=]+'));
     }
 
+    // Lista os únicos campos aceitos em produtos e aplica limites.
     function validProduct(data) {
       return data.keys().hasOnly(['name', 'description', 'image_url', 'affiliate_link'])
         && text(data.name, 1, 120) && text(data.description, 0, 2000)
         && imageUrl(data.image_url) && externalUrl(data.affiliate_link);
     }
 
+    // Valida o documento público de uma foto.
     function validPhoto(data) {
       return data.keys().hasOnly(['image_url', 'alt', 'created_at'])
         && imageUrl(data.image_url) && text(data.alt, 0, 160)
         && text(data.created_at, 1, 40);
     }
 
+    // Valida o formato básico do barbeiro, dia e hora; o frontend também verifica data real e futura.
     function validSlot(data) {
       return text(data.barber_name, 1, 120)
         && data.date is string && data.date.matches('[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])')
         && data.time is string && data.time.matches('([01][0-9]|2[0-3]):[0-5][0-9](:00)?');
     }
 
+    // Perfil privado; master administra somente outras contas da equipe.
     match /users/{userId} {
       allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
       allow create: if isAuthenticated() && request.auth.uid == userId
@@ -65,37 +90,42 @@ service cloud.firestore {
         || (isAdmin() && request.auth.uid != userId
           && resource.data.role in ['pending', 'barber', 'Barber', 'BARBER']
           && request.resource.data.role in ['pending', 'barber']
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']));
+          && validPermissions(request.resource.data)
+          && (!('permissions' in resource.data) || 'permissions' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'permissions']));
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
+    // Leitura pública; gestão depende da permissão Produtos.
     match /products/{productId} {
       allow read: if true;
-      allow create, update: if isBarberOrAdmin() && validProduct(request.resource.data);
-      allow delete: if isBarberOrAdmin();
+      allow create, update: if hasFeature('products') && validProduct(request.resource.data);
+      allow delete: if hasFeature('products');
     }
 
+    // Leitura pública; gestão depende da permissão Fotos.
     match /gallery/{photoId} {
       allow read: if true;
-      allow create, update: if isBarberOrAdmin() && validPhoto(request.resource.data);
-      allow delete: if isBarberOrAdmin();
+      allow create, update: if hasFeature('gallery') && validPhoto(request.resource.data);
+      allow delete: if hasFeature('gallery');
     }
 
+    // Somente vagas livres são públicas; reservas dependem da permissão Agenda.
     match /schedules/{scheduleId} {
-      allow read: if resource.data.is_available == true || isBarberOrAdmin();
+      allow read: if resource.data.is_available == true || hasFeature('schedules');
       // Disponibilidades públicas nunca contêm dados de clientes.
-      allow create: if isBarberOrAdmin() && validSlot(request.resource.data)
+      allow create: if hasFeature('schedules') && validSlot(request.resource.data)
         && request.resource.data.is_available == true
         && request.resource.data.keys().hasOnly(['barber_name', 'date', 'time', 'is_available']);
       // Confirmar é a única edição: não se pode republicar o nome do cliente.
-      allow update: if isBarberOrAdmin() && resource.data.is_available == true
+      allow update: if hasFeature('schedules') && resource.data.is_available == true
         && request.resource.data.is_available == false && validSlot(request.resource.data)
         && text(request.resource.data.client_name, 1, 120)
         && text(request.resource.data.confirmed_at, 1, 40)
         && text(request.resource.data.calendar_id, 1, 256)
         && request.resource.data.keys().hasOnly(['barber_name', 'date', 'time', 'is_available', 'client_name', 'confirmed_at', 'calendar_id'])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_available', 'client_name', 'confirmed_at', 'calendar_id']);
-      allow delete: if isBarberOrAdmin();
+      allow delete: if hasFeature('schedules');
     }
   }
 }

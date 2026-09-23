@@ -1,4 +1,5 @@
-const CACHE_NAME = 'maneirin-studio-v18';
+// Cache exclusivo de arquivos estáticos. Nunca armazena documentos Firestore nem credenciais.
+const CACHE_NAME = 'maneirin-studio-v20';
 const APP_SHELL = [
     '/',
     '/index.html',
@@ -13,6 +14,9 @@ const APP_SHELL = [
     '/js/firebase.js',
     '/js/utils.js',
     '/js/ui.js',
+    '/js/carousel.js',
+    '/js/permissions.js',
+    '/js/admin.js',
     '/js/media.js',
     '/js/calendar.js',
     '/Fotos/Logo.png',
@@ -21,6 +25,7 @@ const APP_SHELL = [
     '/manifest.webmanifest'
 ];
 
+// Prepara a versão nova inteira antes de ativá-la.
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -29,6 +34,7 @@ self.addEventListener('install', event => {
     );
 });
 
+// Remove somente caches antigos deste aplicativo e assume as páginas abertas.
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys()
@@ -41,6 +47,7 @@ self.addEventListener('activate', event => {
     );
 });
 
+// Prefere a rede; usa cache/offline apenas quando necessário, sem interceptar outros domínios.
 self.addEventListener('fetch', event => {
     const request = event.request;
     const url = new URL(request.url);

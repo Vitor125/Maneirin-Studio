@@ -18,7 +18,7 @@ async function main() {
     const { Client } = require(path.join(cli, 'apiv2'));
     const client = new Client({ urlPrefix: 'https://firebaserules.googleapis.com', apiVersion: 'v1' });
     const cases = [];
-    const add = (name, expectation, collection, method, role, before, after, own = true) => {
+    const add = (name, expectation, collection, method, role, before, after, own = true, permissions) => {
         cases.push({ name, test: {
             expectation,
             request: {
@@ -29,7 +29,7 @@ async function main() {
             },
             ...(before ? { resource: { data: before } } : {}),
             functionMocks: [{ function: 'get', args: [{ anyValue: {} }], result: {
-                value: role === 'missing' ? null : { data: { role } }
+                value: role === 'missing' ? null : { data: { role, ...(permissions === undefined ? {} : { permissions }) } }
             } }]
         } });
     };
@@ -90,6 +90,34 @@ async function main() {
     add('sobrescrever cliente confirmado negado', 'DENY', 'schedules', 'update', 'barber', booking, { ...booking, client_name: 'Outro' });
     add('trocar data durante confirmação negado', 'DENY', 'schedules', 'update', 'barber', slot, { ...booking, date: '2030-01-02' });
     add('confirmar sem cliente negado', 'DENY', 'schedules', 'update', 'barber', slot, { ...booking, client_name: '' });
+    // Matriz de privilégios: a interface não é a barreira de segurança.
+    const denied = { schedules: false, gallery: false, products: false };
+    const permitted = { schedules: true, gallery: true, products: true };
+    const barber = { ...profile, role: 'barber', permissions: permitted };
+    add('master altera permissões da equipe', 'ALLOW', 'users', 'update', 'admin', barber, { ...barber, permissions: denied }, false);
+    add('barbeiro não concede permissões a si', 'DENY', 'users', 'update', 'barber', { ...barber, permissions: denied }, barber, true, denied);
+    add('barbeiro não altera outro barbeiro', 'DENY', 'users', 'update', 'barber', barber, { ...barber, permissions: denied }, false, permitted);
+    add('pending não cria perfil com permissões', 'DENY', 'users', 'create', 'missing', null, { ...profile, permissions: permitted });
+    add('master não remove mapa para reativar acesso legado', 'DENY', 'users', 'update', 'admin', barber, { ...profile, role: 'barber' }, false);
+    add('master não salva mapa parcial', 'DENY', 'users', 'update', 'admin', barber, { ...barber, permissions: { schedules: true } }, false);
+    add('master não salva permissão com tipo errado', 'DENY', 'users', 'update', 'admin', barber, { ...barber, permissions: { ...denied, gallery: 'true' } }, false);
+    add('master não adiciona poder de administrar ao mapa', 'DENY', 'users', 'update', 'admin', barber, { ...barber, permissions: { ...permitted, admin: true } }, false);
+    add('master não altera outro master', 'DENY', 'users', 'update', 'admin', { ...profile, role: 'admin' }, barber, false);
+    add('master aprova com acesso restrito', 'ALLOW', 'users', 'update', 'admin', profile, { ...barber, permissions: { ...denied, schedules: true } }, false);
+    add('master revoga sem apagar escolhas', 'ALLOW', 'users', 'update', 'admin', barber, { ...barber, role: 'pending' }, false);
+    for (const [collection, data] of [['products', product], ['gallery', photo], ['schedules', slot]]) {
+        add(`${collection}: permissão explícita permite criar`, 'ALLOW', collection, 'create', 'barber', null, data, true, { ...denied, [collection]: true });
+        add(`${collection}: permissão revogada nega criar`, 'DENY', collection, 'create', 'barber', null, data, true, denied);
+        add(`${collection}: permissão revogada nega excluir`, 'DENY', collection, 'delete', 'barber', data, null, true, denied);
+        add(`${collection}: mapa vazio não concede acesso`, 'DENY', collection, 'create', 'barber', null, data, true, {});
+        add(`${collection}: mapa inválido não concede acesso`, 'DENY', collection, 'create', 'barber', null, data, true, null);
+        add(`${collection}: pending com mapa não concede acesso`, 'DENY', collection, 'create', 'pending', null, data, true, permitted);
+        add(`${collection}: master mantém acesso completo`, 'ALLOW', collection, 'create', 'admin', null, data, true, denied);
+    }
+    add('reserva privada bloqueada sem Agenda', 'DENY', 'schedules', 'get', 'barber', booking, null, true, denied);
+    add('reserva privada liberada com Agenda', 'ALLOW', 'schedules', 'get', 'barber', booking, null, true, { ...denied, schedules: true });
+    add('confirmar bloqueado sem Agenda', 'DENY', 'schedules', 'update', 'barber', slot, booking, true, denied);
+    add('confirmar liberado com Agenda', 'ALLOW', 'schedules', 'update', 'barber', slot, booking, true, { ...denied, schedules: true });
     const response = await client.post('/projects/site-maneirin-studio:test', {
         source: { files: [{ name: 'firestore.rules', content: fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8') }] },
         testSuite: { testCases: cases.map(item => item.test) }

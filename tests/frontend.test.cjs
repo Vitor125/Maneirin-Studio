@@ -19,7 +19,7 @@ function loadApp(overrides = {}) {
     };
     const context = vm.createContext({
         console, URL, URLSearchParams, TextEncoder, Date,
-        initializeApp: () => ({}), getFirestore: () => ({}), getAuth: () => ({ currentUser: null }),
+        initializeApp: () => ({}), getFirestore: () => ({}), getAuth: () => ({ currentUser: { uid: 'tester' } }),
         doc: (_, collection, id) => `${collection}/${id}`, collection: (_, name) => name,
         query: (...args) => args, where: (...args) => args,
         getDocs: async () => ({ docs: [] }),
@@ -32,13 +32,14 @@ function loadApp(overrides = {}) {
         window: { prompt: () => 'Cliente de teste', open: () => null, setTimeout: () => 1, clearTimeout() {}, setInterval() {}, addEventListener() {} },
         ...overrides
     });
-    for (const file of ['js/firebase.js', 'js/utils.js', 'js/media.js', 'js/calendar.js', 'js/ui.js', 'script.js', 'dashboard.js']) {
+    for (const file of ['js/firebase.js', 'js/utils.js', 'js/media.js', 'js/calendar.js', 'js/ui.js', 'js/permissions.js', 'js/admin.js', 'script.js', 'dashboard.js']) {
         let source = fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8');
         source = source.replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
         vm.runInContext(source, context, { filename: file });
     }
     context.setupAnimations = () => {};
     context.initCommonUI = () => {};
+    context.resetDashboardData('admin');
     return { context, element, listeners };
 }
 
@@ -259,4 +260,85 @@ test('callback antigo de perfil não reabre painel após sair', async () => {
     profileCallback({ data: () => ({ role: 'admin' }) });
     assert.equal(element('mainDashboard').style.display, 'none');
     assert.equal(element('adminUsersList').innerHTML, '');
+});
+
+test('permissões explícitas restringem o barbeiro e preservam o master', () => {
+    const { context: app } = loadApp();
+    const denied = { schedules: false, gallery: false, products: false };
+    assert.equal(app.getAccess({ role: 'barber' }).permissions.products, true);
+    assert.equal(app.getAccess({ role: 'barber', permissions: denied }).permissions.products, false);
+    assert.equal(app.getAccess({ role: 'barber', permissions: { gallery: true } }).permissions.schedules, false);
+    assert.equal(app.getAccess({ role: 'barber', permissions: null }).permissions.gallery, false);
+    assert.equal(app.getAccess({ role: 'pending', permissions: { gallery: true } }).permissions.gallery, false);
+    assert.equal(app.getAccess({ role: 'admin', permissions: denied }).permissions.products, true);
+});
+
+test('área master escapa nomes e não permite editar a própria conta', () => {
+    const { context: app } = loadApp();
+    const html = app.memberCard({ id: 'other', role: 'barber', name: '<script>alert(1)</script>' });
+    assert.ok(!html.includes('<script>'));
+    assert.ok(html.includes('data-permission="schedules"'));
+    assert.ok(!app.memberCard({ id: 'tester', role: 'admin' }).includes('data-save-access'));
+});
+
+test('master grava papel e permissões na mesma transação', async () => {
+    let update;
+    const profile = { id: 'other', role: 'pending' };
+    const { context: app } = loadApp({ runTransaction: async (_, callback) => callback({
+        get: async () => ({ exists: () => true, data: () => profile }),
+        update: (ref, data) => { update = { ref, data }; }
+    }) });
+    await app.saveBarberAccess(profile, 'barber', { schedules: true, gallery: false, products: false });
+    assert.equal(update.ref, 'users/other');
+    assert.equal(update.data.role, 'barber');
+    assert.equal(update.data.permissions.schedules, true);
+    assert.equal(update.data.permissions.gallery, false);
+});
+
+test('alteração concorrente de permissões impede sobrescrita', async () => {
+    let writes = 0;
+    const profile = { id: 'other', role: 'barber' };
+    const { context: app } = loadApp({ runTransaction: async (_, callback) => callback({
+        get: async () => ({ exists: () => true, data: () => ({ ...profile, permissions: { schedules: false, gallery: true, products: true } }) }),
+        update: () => { writes++; }
+    }) });
+    await assert.rejects(app.saveBarberAccess(profile, 'barber', { schedules: true, gallery: true, products: true }), /acesso mudou/);
+    assert.equal(writes, 0);
+});
+
+test('mudança concorrente de escolhas pending também é detectada', async () => {
+    const profile = { id: 'other', role: 'pending', permissions: { schedules: false, gallery: false, products: false } };
+    const { context: app } = loadApp({ runTransaction: async (_, callback) => callback({
+        get: async () => ({ exists: () => true, data: () => ({ ...profile, permissions: { ...profile.permissions, gallery: true } }) }),
+        update: () => { throw new Error('Não deveria gravar'); }
+    }) });
+    await assert.rejects(app.saveBarberAccess(profile, 'barber', profile.permissions), /acesso mudou/);
+});
+
+test('mapas incompletos e alteração da própria conta são recusados', async () => {
+    const { context: app } = loadApp();
+    await assert.rejects(app.saveBarberAccess({ id: 'other' }, 'barber', { gallery: true }), /inválida/);
+    await assert.rejects(app.saveBarberAccess({ id: 'tester' }, 'pending', { schedules: false, gallery: false, products: false }), /inválida/);
+});
+
+test('consulta e ação de área bloqueada não chegam ao banco', async () => {
+    let requests = 0;
+    const { context: app } = loadApp({ getDocs: async () => { requests++; return { docs: [] }; }, deleteDoc: async () => { requests++; } });
+    app.resetDashboardData({ role: 'barber', permissions: { schedules: true, gallery: false, products: false } });
+    await app.loadDashboardProducts();
+    await app.deleteGalleryPhoto('photo');
+    assert.equal(requests, 0);
+    await app.loadDashboardSchedules();
+    assert.equal(requests, 1);
+});
+
+test('revogar só Agenda invalida resposta pendente sem mudar o papel', async () => {
+    let resolve;
+    const { context: app, element } = loadApp({ getDocs: () => new Promise(done => { resolve = done; }) });
+    app.resetDashboardData({ role: 'barber' });
+    const loading = app.loadDashboardSchedules();
+    app.resetDashboardData({ role: 'barber', permissions: { schedules: false, gallery: true, products: true } });
+    resolve({ docs: [{ id: 'private', data: () => ({ client_name: 'Privado', date: '2030-01-01', time: '10:00', is_available: false }) }] });
+    await loading;
+    assert.equal(element('dashboardSchedulesList').innerHTML, '');
 });

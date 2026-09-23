@@ -1,3 +1,5 @@
+/* Estilos do projeto: base → seções públicas → painel → adaptações responsivas.
+   A ordem importa: regras específicas abaixo complementam as regras gerais acima. */
 /* Design System */
 :root {
     --bg-color: #111827;
@@ -24,6 +26,7 @@
 
 html {
     scroll-behavior: smooth;
+    scroll-padding-top: 90px;
 }
 
 body {
@@ -407,10 +410,8 @@ h2::after {
 }
 
 .products-carousel {
-    align-items: stretch;
-    display: grid;
-    gap: 16px;
-    grid-template-columns: 46px minmax(0, 1fr) 46px;
+    width: 100%;
+    min-width: 0;
 }
 
 .products-carousel-track {
@@ -418,33 +419,15 @@ h2::after {
     gap: 24px;
     overflow-x: auto;
     padding: 8px 4px 24px;
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: thin;
+    scroll-behavior: auto;
+    scrollbar-width: none;
 }
 
 .products-carousel-track .product-card {
-    flex: 0 0 min(320px, 82vw);
-    scroll-snap-align: start;
+    flex: 0 0 29%;
 }
 
-.carousel-button {
-    align-self: center;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(96, 165, 250, 0.22);
-    border-radius: 50%;
-    color: #ffffff;
-    cursor: pointer;
-    height: 46px;
-    transition: var(--transition);
-    width: 46px;
-}
 
-.carousel-button:hover {
-    background: rgba(96, 165, 250, 0.16);
-    border-color: var(--accent-color);
-    transform: translateY(-2px);
-}
 
 .products-page {
     min-height: 100vh;
@@ -1157,9 +1140,6 @@ footer p {
         flex-basis: min(310px, 84vw);
     }
 
-    .carousel-button {
-        display: none;
-    }
 
     .dash-grid,
     .form-row {
@@ -1233,7 +1213,7 @@ footer p {
     flex: 1;
     min-width: 0;
     overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    gap: 16px;
     scrollbar-width: none;
 }
 
@@ -1242,12 +1222,11 @@ footer p {
 }
 
 .gallery-slide {
-    flex: 0 0 100%;
+    flex: 0 0 84%;
     margin: 0;
     overflow: hidden;
     border-radius: 12px;
     position: relative;
-    scroll-snap-align: center;
 }
 
 .gallery-slide img {
@@ -1271,28 +1250,12 @@ footer p {
     right: 0;
 }
 
-.gallery-button {
-    align-items: center;
-    background: var(--primary-color);
-    border: 0;
-    border-radius: 50%;
-    color: #ffffff;
-    cursor: pointer;
-    display: inline-flex;
-    flex: 0 0 36px;
-    height: 36px;
-    justify-content: center;
-    width: 36px;
-}
-
-.gallery-button:hover {
-    background: var(--accent-color);
-}
-
-.gallery-button[hidden], .list-thumb[hidden] { display: none; }
 
 
-/* Dashboard desktop layout inspired by the MEVAM administration panel. */
+.list-thumb[hidden] { display: none; }
+
+
+/* Painel desktop: menu lateral fixo e cartões claros; no celular valem os estilos escuros anteriores. */
 @media screen and (min-width: 769px) {
 .dashboard-page {
     background: #f1f5f9;
@@ -1585,4 +1548,35 @@ footer p {
 @media screen and (max-width: 480px) {
     .dashboard-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
     .dashboard-tab { padding: 12px 10px; gap: 6px; font-size: .85rem; }
+}
+
+/* Carrosséis contínuos: sem setas, com o próximo item parcialmente visível. */
+.hero-actions .btn { padding-left: 24px; padding-right: 24px; }
+.btn-instagram { background: linear-gradient(120deg, #833ab4, #c13584, #e6683c); color: #fff; }
+.btn-instagram:hover { transform: translateY(-3px); }
+.loop-carousel { cursor: grab; overscroll-behavior-x: contain; }
+.loop-carousel:active { cursor: grabbing; }
+.loop-carousel::-webkit-scrollbar { display: none; }
+.loop-carousel:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 5px; }
+.loop-carousel img { user-select: none; -webkit-user-drag: none; }
+.loop-carousel .product-card { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+}
+
+/* Administração master: permissões agrupadas por pessoa, com rótulos clicáveis. */
+.member-card { border: 1px solid rgba(96, 165, 250, .3); border-radius: 12px; padding: 20px; }
+.member-permissions { border: 0; margin: 18px 0; padding: 0; display: grid; gap: 12px; }
+.member-permissions legend { font-weight: 600; margin-bottom: 12px; }
+.permission-option { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.permission-option input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary-light); flex-shrink: 0; }
+.permission-option span { display: grid; gap: 3px; }
+.permission-option small, .member-status { color: var(--text-muted); }
+.member-feedback:not(:empty) { margin-top: 12px; }
+.admin-section > .btn { grid-column: 1 / -1; justify-self: start; margin-bottom: 18px; }
+.member-card .list-actions { justify-content: flex-start; }
+button:disabled { cursor: wait; opacity: .65; }
+@media (min-width: 769px) {
+    .member-card { border-color: #cbd5e1; }
+    .permission-option small, .member-status { color: #475569; }
 }

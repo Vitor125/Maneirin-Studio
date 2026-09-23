@@ -1,17 +1,24 @@
-import { collection, addDoc, deleteDoc, doc, getDocs, runTransaction, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+// Orquestra o painel: sessão → perfil/permissões → abas → consultas e ações autorizadas.
+import { collection, addDoc, deleteDoc, doc, getDocs, runTransaction, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 import { db, auth } from './js/firebase.js';
 import { escapeHtml, formatDateBR, formatTime, getScheduleStart, isUpcomingSchedule, safeExternalUrl, safeImageUrl, sortSchedulesByStart, documentData, boundedText } from './js/utils.js';
 import { buildGoogleCalendarUrl, GOOGLE_CALENDAR_ID } from './js/calendar.js';
 import { readImageInput, bindImageErrors } from './js/media.js';
 import { initCommonUI } from './js/ui.js';
+import { FEATURES, getAccess, accessFingerprint } from './js/permissions.js';
+import { memberCard, saveBarberAccess } from './js/admin.js';
 
 let dashboardAccessVersion = 0;
 let dashboardRole = null;
+let dashboardPermissions = getAccess().permissions;
 
-function resetDashboardData(role = null) {
+/** Invalida operações antigas, recalcula permissões e limpa as listas da sessão anterior. */
+function resetDashboardData(profile = null) {
     dashboardAccessVersion++;
-    dashboardRole = role;
+    const access = getAccess(profile);
+    dashboardRole = access.role;
+    dashboardPermissions = access.permissions;
     for (const id of ['dashboardProductsList', 'dashboardSchedulesList', 'dashboardGalleryList', 'adminUsersList']) {
         document.getElementById(id).innerHTML = '';
     }
@@ -20,13 +27,16 @@ function resetDashboardData(role = null) {
 }
 
 // Uma resposta iniciada por outra sessão/permissão não pode preencher o painel.
+/** Captura usuário, versão da sessão e área exigida; a função retornada deve ser conferida após cada espera. */
 function captureDashboardAccess(requiredRole) {
     const version = dashboardAccessVersion;
     const uid = auth.currentUser?.uid;
     return () => Boolean(uid && uid === auth.currentUser?.uid && version === dashboardAccessVersion
-        && (requiredRole ? dashboardRole === requiredRole : ['admin', 'barber'].includes(dashboardRole)));
+        && (requiredRole === 'admin' ? dashboardRole === 'admin'
+            : requiredRole ? dashboardPermissions[requiredRole] === true : ['admin', 'barber'].includes(dashboardRole)));
 }
 
+/** Mostra uma mensagem temporária de sucesso ou erro sem inserir HTML recebido do usuário. */
 function setDashboardStatus(message, type = 'success') {
     const status = document.getElementById('dashboardStatus');
     if (!status) return;
@@ -41,6 +51,7 @@ function setDashboardStatus(message, type = 'success') {
     }, 5000);
 }
 
+/** Atualiza o indicador persistente de conexão do painel. */
 function setDatabaseStatus(message, type = 'success') {
     const status = document.getElementById('databaseStatus');
     if (!status) return;
@@ -49,6 +60,7 @@ function setDatabaseStatus(message, type = 'success') {
     status.className = `database-status ${type}`;
 }
 
+/** Confere se o perfil atual pode ser lido, descartando respostas de uma sessão encerrada. */
 async function loadDatabaseStatus() {
     const canRender = captureDashboardAccess();
     if (!canRender()) return;
@@ -62,6 +74,7 @@ async function loadDatabaseStatus() {
     }
 }
 
+/** Cria apenas perfis ausentes como pending; a transação preserva papéis já aprovados. */
 async function ensureUserProfile(user, name) {
     const ref = doc(db, 'users', user.uid);
     await runTransaction(db, async transaction => {
@@ -75,17 +88,20 @@ async function ensureUserProfile(user, name) {
     });
 }
 
+/** Lê arquivo ou URL do formulário de produto usando o validador compartilhado. */
 function getProductImage() {
     return readImageInput('prodImageFile', 'prodImageUrl');
 }
 
+/** Exige uma imagem válida para o formulário da galeria. */
 function getGalleryImage() {
     return readImageInput('galleryImageFile', 'galleryImageUrl', true);
 }
 
+/** Valida e grava uma foto; interrupções de acesso durante o carregamento cancelam o envio. */
 async function submitGalleryPhoto(event) {
     event.preventDefault();
-    const canRender = captureDashboardAccess();
+    const canRender = captureDashboardAccess('gallery');
     if (!canRender()) return;
     try {
         const imageUrl = await getGalleryImage();
@@ -105,19 +121,25 @@ async function submitGalleryPhoto(event) {
     }
 }
 
+/** Remove a entrada da galeria quando a sessão possui permissão de Fotos. */
 async function deleteGalleryPhoto(id) {
+    const canRender = captureDashboardAccess('gallery');
+    if (!canRender()) return;
     try {
         await deleteDoc(doc(db, 'gallery', id));
+        if (!canRender()) return;
         setDashboardStatus('Foto removida da galeria.');
         loadDashboardGallery();
     } catch (error) {
+        if (!canRender()) { return; }
         setDashboardStatus('Erro ao remover foto.', 'error');
     }
 }
 
+/** Valida imagem, textos e link de afiliado antes de salvar o produto e recarregar a lista. */
 async function submitProduct(event) {
     event.preventDefault();
-    const canRender = captureDashboardAccess();
+    const canRender = captureDashboardAccess('products');
     if (!canRender()) return;
     try {
         const imageUrl = await getProductImage();
@@ -151,7 +173,10 @@ async function submitProduct(event) {
     }
 }
 
+/** Publica uma disponibilidade futura no fuso do Studio, sem reservar automaticamente para o cliente. */
 async function submitSchedule(event) {
+    const canRender = captureDashboardAccess('schedules');
+    if (!canRender()) return;
     event.preventDefault();
     const schedule = {
         barber_name: document.getElementById('schedBarber').value.trim(),
@@ -166,36 +191,51 @@ async function submitSchedule(event) {
             return;
         }
         await addDoc(collection(db, "schedules"), schedule);
+        if (!canRender()) return;
         document.getElementById('schedDate').value = '';
         document.getElementById('schedTime').value = '';
         setDashboardStatus('Horário adicionado com sucesso.');
         loadDashboardSchedules();
     } catch (error) {
+        if (!canRender()) { return; }
         setDashboardStatus('Erro ao salvar horário.', 'error');
     }
 }
 
+/** Exclui um produto permitido e atualiza a lista do painel. */
 async function deleteProduct(id) {
+    const canRender = captureDashboardAccess('products');
+    if (!canRender()) return;
     try {
         await deleteDoc(doc(db, "products", id));
+        if (!canRender()) return;
         setDashboardStatus('Produto removido.');
         loadDashboardProducts();
     } catch (error) {
+        if (!canRender()) { return; }
         setDashboardStatus('Erro ao remover produto.', 'error');
     }
 }
 
+/** Remove o horário do Firestore; esta ação não apaga eventos já salvos no Google Calendar. */
 async function deleteSchedule(id) {
+    const canRender = captureDashboardAccess('schedules');
+    if (!canRender()) return;
     try {
         await deleteDoc(doc(db, "schedules", id));
+        if (!canRender()) return;
         setDashboardStatus('Horário removido.');
         loadDashboardSchedules();
     } catch (error) {
+        if (!canRender()) { return; }
         setDashboardStatus('Erro ao remover horário.', 'error');
     }
 }
 
+/** Relê e confirma a vaga em uma transação; depois abre o calendário para o usuário clicar em Salvar. */
 async function confirmSchedule(id, schedule) {
+    const canRender = captureDashboardAccess('schedules');
+    if (!canRender()) return;
     const clientName = window.prompt('Nome do cliente para confirmar este agendamento:');
     const normalizedClientName = clientName?.trim();
 
@@ -228,6 +268,7 @@ async function confirmSchedule(id, schedule) {
                 is_available: false
             });
         });
+        if (!canRender()) { calendarWindow?.close(); return; }
         let openedCalendar = false;
         try {
             if (calendarWindow && !calendarWindow.closed) {
@@ -240,13 +281,15 @@ async function confirmSchedule(id, schedule) {
             : 'Horário confirmado. Use Adicionar à agenda para salvar o evento no Google Calendar.');
         loadDashboardSchedules();
     } catch (error) {
+        if (!canRender()) { calendarWindow?.close(); return; }
         if (calendarWindow) calendarWindow.close();
         setDashboardStatus(error.message || 'Erro ao confirmar agendamento.', 'error');
     }
 }
 
+/** Lista produtos para quem pode gerenciá-los, escapando textos e identificadores nos botões. */
 async function loadDashboardProducts() {
-    const canRender = captureDashboardAccess();
+    const canRender = captureDashboardAccess('products');
     if (!canRender()) return;
     const list = document.getElementById('dashboardProductsList');
     if (!list) return;
@@ -281,8 +324,9 @@ async function loadDashboardProducts() {
         list.innerHTML = '<p class="empty-message">Não foi possível carregar os produtos.</p>';
     }
 }
+/** Lista disponibilidades e reservas privadas somente para quem tem acesso à Agenda. */
 async function loadDashboardSchedules() {
-    const canRender = captureDashboardAccess();
+    const canRender = captureDashboardAccess('schedules');
     if (!canRender()) return;
     const list = document.getElementById('dashboardSchedulesList');
     if (!list) return;
@@ -344,8 +388,9 @@ async function loadDashboardSchedules() {
     }
 }
 
+/** Lista as fotos gerenciáveis e indica arquivos indisponíveis sem executar HTML inline. */
 async function loadDashboardGallery() {
-    const canRender = captureDashboardAccess();
+    const canRender = captureDashboardAccess('gallery');
     if (!canRender()) return;
     const list = document.getElementById('dashboardGalleryList');
     if (!list) return;
@@ -378,73 +423,49 @@ async function loadDashboardGallery() {
     }
 }
 
+/** Carrega a equipe para o master e conecta cada formulário ao salvamento transacional. */
 async function loadAdminUsers() {
     const canRender = captureDashboardAccess('admin');
     if (!canRender()) return;
     const list = document.getElementById('adminUsersList');
-    if (!list) return;
-    
-    list.innerHTML = '<p class="loading-message">Carregando barbeiros...</p>';
+    list.innerHTML = '<p class="loading-message">Carregando equipe...</p>';
     try {
-        const querySnapshot = await getDocs(collection(db, 'users'));
+        const snapshot = await getDocs(collection(db, 'users'));
         if (!canRender()) return;
-        const users = querySnapshot.docs.map(d => ({ ...documentData(d), role: String(d.data().role || 'pending').toLowerCase() }));
-        
-        if (!users.length) {
-            list.innerHTML = '<p class="empty-message">Nenhum usuário encontrado.</p>';
-            return;
-        }
-
-        list.innerHTML = users.map(u => `
-            <article class="list-item ${u.role === 'pending' ? 'muted' : ''}">
-                <div class="list-item-content">
-                    <strong>${escapeHtml(u.name || 'Sem nome')}</strong>
-                    <span>${escapeHtml(u.email)} - Status: <b>${escapeHtml(u.role)}</b></span>
-                </div>
-                ${u.role === 'pending' ? `
-                    <button class="btn btn-primary btn-compact" type="button" data-approve="${escapeHtml(u.id)}">Aprovar</button>
-                ` : u.role === 'barber' ? `
-                    <button class="btn btn-danger-outline btn-compact" type="button" data-revoke="${escapeHtml(u.id)}">Revogar</button>
-                ` : `
-                    <span class="admin-role-label">Admin</span>
-                `}
-            </article>
-        `).join('');
-        
-        list.querySelectorAll('[data-approve]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const uid = btn.dataset.approve;
-                btn.disabled = true;
+        const users = snapshot.docs.map(documentData);
+        list.innerHTML = users.length ? users.map(memberCard).join('') : '<p class="empty-message">Nenhuma conta encontrada.</p>';
+        list.querySelectorAll('[data-member]').forEach(card => {
+            const profile = users.find(user => user.id === card.dataset.member);
+            const submit = async revoke => {
+                if (!canRender()) return;
+                const controls = [...card.querySelectorAll('button, input')];
+                if (controls.some(control => control.disabled)) return;
+                const permissions = Object.fromEntries(FEATURES.map(({ key }) => [key,
+                    revoke ? getAccess(profile).permissions[key] : card.querySelector('[data-permission="' + key + '"]').checked
+                ]));
+                controls.forEach(control => { control.disabled = true; });
+                const feedback = card.querySelector('.member-feedback');
+                feedback.textContent = 'Salvando...';
                 try {
-                    await updateDoc(doc(db, 'users', uid), { role: 'barber' });
+                    await saveBarberAccess(profile, revoke ? 'pending' : 'barber', permissions);
+                    if (!canRender()) return;
+                    setDashboardStatus(revoke ? 'Acesso revogado.' : 'Permissões atualizadas.');
                     await loadAdminUsers();
-                } catch {
-        if (!canRender()) return;
-                    setDashboardStatus('Não foi possível aprovar o acesso.', 'error');
-                    btn.disabled = false;
+                } catch (error) {
+                    if (!canRender()) return;
+                    feedback.textContent = error.message || 'Não foi possível alterar o acesso.';
+                    controls.forEach(control => { control.disabled = false; });
                 }
-            });
+            };
+            card.querySelector('[data-save-access]')?.addEventListener('click', () => submit(false));
+            card.querySelector('[data-revoke-access]')?.addEventListener('click', () => submit(true));
         });
-        
-        list.querySelectorAll('[data-revoke]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const uid = btn.dataset.revoke;
-                btn.disabled = true;
-                try {
-                    await updateDoc(doc(db, 'users', uid), { role: 'pending' });
-                    await loadAdminUsers();
-                } catch {
-                    setDashboardStatus('Não foi possível revogar o acesso.', 'error');
-                    btn.disabled = false;
-                }
-            });
-        });
-        
-    } catch (error) {
-        list.innerHTML = '<p class="empty-message">Erro ao carregar usuários. Verifique as permissões.</p>';
+    } catch {
+        if (canRender()) list.innerHTML = '<p class="empty-message">Não foi possível carregar a equipe. Use Atualizar lista para tentar novamente.</p>';
     }
 }
 
+/** Controla seleção, teclado e visibilidade das abas conforme as permissões atuais. */
 function setupDashboardTabs() {
     const tabs = [...document.querySelectorAll('[data-dashboard-tab]')];
     if (!tabs.length) return () => {};
@@ -480,15 +501,26 @@ function setupDashboardTabs() {
         });
     });
 
-    return role => {
-        document.getElementById('tabBarbeiros').hidden = role !== 'admin';
-        if (!['admin', 'barber'].includes(role) || (activePanel === 'adminSection' && role !== 'admin')) {
-            activePanel = 'agendaPanel';
-        }
-        select(activePanel);
+    return profile => {
+        const access = getAccess(profile);
+        const featuresByPanel = { agendaPanel: 'schedules', galleryPanel: 'gallery', productsPanel: 'products' };
+        tabs.forEach(tab => {
+            const panel = tab.dataset.dashboardTab;
+            tab.hidden = panel === 'adminSection' ? access.role !== 'admin' : !access.permissions[featuresByPanel[panel]];
+            if (tab.hidden) {
+                tab.setAttribute('aria-selected', 'false');
+                tab.tabIndex = -1;
+                document.getElementById(panel).hidden = true;
+            }
+        });
+        const visible = tabs.filter(tab => !tab.hidden);
+        if (!visible.some(tab => tab.dataset.dashboardTab === activePanel)) activePanel = visible[0]?.dataset.dashboardTab;
+        if (activePanel) select(activePanel);
+        document.getElementById('noAccessMessage').hidden = visible.length > 0;
     };
 }
 
+// Conecta os formulários somente depois que seus elementos existem no DOM.
 document.addEventListener('DOMContentLoaded', () => {
     initCommonUI();
     const authForm = document.getElementById('authForm');
@@ -498,6 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainDashboard = document.getElementById('mainDashboard');
     const logoutBtn = document.getElementById('logoutBtn');
     const updateDashboardTabs = setupDashboardTabs();
+    document.getElementById('refreshUsersBtn').addEventListener('click', loadAdminUsers);
 
     const galleryForm = document.getElementById('galleryForm');
     const handleForm = handler => async event => {
@@ -602,6 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Cada troca de conta invalida o observador anterior e todas as respostas pendentes.
     let unsubscribeProfile = () => {};
     let authGeneration = 0;
     const showAccessMessage = (title, message, retry = false) => {
@@ -640,13 +674,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isCurrentSession()) return;
             unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), snapshot => {
                 if (!isCurrentSession()) return;
-                const role = String(snapshot.data()?.role || 'pending').toLowerCase();
+                const profile = snapshot.data() || {};
+                const { role } = getAccess(profile);
                 const allowed = ['admin', 'barber'].includes(role);
-                const changed = dashboardRole !== role;
-                if (changed) resetDashboardData(role);
+                const changed = accessFingerprint({ role: dashboardRole, permissions: dashboardPermissions }) !== accessFingerprint(getAccess(profile));
+                if (changed) {
+                    resetDashboardData(profile);
+                    for (const form of [productForm, scheduleForm, galleryForm]) form?.reset();
+                }
                 pendingOverlay.style.display = allowed ? 'none' : 'flex';
                 mainDashboard.style.display = allowed ? 'block' : 'none';
-                updateDashboardTabs(role);
+                updateDashboardTabs(profile);
                 if (!allowed) {
                     for (const form of [productForm, scheduleForm, galleryForm]) form?.reset();
                     showAccessMessage('Aguardando aprovação', 'Um administrador precisa liberar o acesso da sua conta ao painel.');

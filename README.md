@@ -4,6 +4,8 @@ Site público e painel interno da barbearia. HTML, CSS e módulos JavaScript nat
 
 As decisões funcionais, o histórico e os limites atuais estão em [CONTEXT.md](CONTEXT.md). Leia esse arquivo antes de alterar o fluxo de reserva.
 
+As configurações sem suporte a comentários estão explicadas em [CONFIGURACAO.md](CONFIGURACAO.md). O código próprio tem comentários de responsabilidade, funções e decisões dos fluxos.
+
 ## Organização
 
 | Local | Responsabilidade |
@@ -17,6 +19,9 @@ As decisões funcionais, o histórico e os limites atuais estão em [CONTEXT.md]
 | `public/js/media.js` | Validação e carregamento de imagens |
 | `public/js/calendar.js` | Link preenchido do Google Calendar |
 | `public/js/ui.js` | Menu, animações, instalação e registro do service worker |
+| `public/js/carousel.js` | Faixas contínuas, arraste, teclado e pausa acessível |
+| `public/js/permissions.js` | Contrato das permissões Agenda, Fotos e Produtos |
+| `public/js/admin.js` | Cartões da equipe e gravação transacional dos acessos |
 | `public/styles.css` | Estilos organizados por seção e tamanho de tela |
 | `public/sw.js` | Cache dos arquivos estáticos e fallback offline |
 | `firestore.rules` | Permissões e validação dos documentos no banco |
@@ -47,7 +52,7 @@ firebase serve --only hosting --project site-maneirin-studio
 - Escape todo dado inserido em templates HTML, inclusive identificadores. Converta documentos com `documentData()` para impedir que um campo `id` substitua o ID real.
 - Links passam por `safeExternalUrl()` e imagens por `safeImageUrl()`. Eventos são ligados por `addEventListener`, sem código inline no HTML.
 - Valide os formulários e também `firestore.rules`; a interface nunca substitui a autorização do banco. Novos campos exigem revisão das regras e dos testes.
-- As listas privadas verificam se a sessão e o papel continuam os mesmos antes de mostrar uma resposta. Preserve essa proteção em novas consultas assíncronas.
+- As listas privadas verificam se a sessão, o papel e as permissões continuam os mesmos antes de mostrar uma resposta. Preserve essa proteção em novas consultas assíncronas.
 - Adicionar um módulo estático exige atualizar `APP_SHELL` e a versão do cache em `public/sw.js`.
 - O SDK Firebase tem versão fixa nos imports. Se for atualizado, mantenha todos os imports na mesma versão e execute as verificações.
 - A configuração web do Firebase identifica o projeto; não é uma credencial administrativa. Nunca coloque chaves de serviço, tokens de sessão ou senhas em `public/` ou no Git.

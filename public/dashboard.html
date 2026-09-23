@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+<!-- Metadados, identidade visual e recursos compartilhados desta página. -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
 </head>
 <body class="dashboard-page">
 
+    <!-- Navegação principal; o menu móvel é controlado por js/ui.js. -->
     <header class="header">
         <nav class="navbar">
             <a href="index.html" class="logo" aria-label="Maneirin Studio">
@@ -31,6 +33,7 @@
         </nav>
     </header>
 
+    <!-- Login/cadastro: novas contas aguardam aprovação do master. Ocultar a tela não concede acesso. -->
     <div class="login-overlay container" id="loginOverlay" style="display: flex; justify-content: center; align-items: center; min-height: 100vh; padding-top: 100px; padding-bottom: 40px;">
         <div class="dash-card" style="max-width: 400px; width: 100%; text-align: center;">
             <img src="Fotos/Logo.png" alt="Maneirin Studio" style="height: 60px; margin-bottom: 20px;">
@@ -72,6 +75,7 @@
         </div>
     </div>
 
+    <!-- Conteúdo específico da página; permissões reais são verificadas no Firestore. -->
     <main class="dashboard-container container" id="mainDashboard" style="display: none;">
         <div class="dashboard-heading">
             <h1>Painel do Barbeiro</h1>
@@ -81,6 +85,7 @@
         <div class="dashboard-status" id="dashboardStatus" role="status" aria-live="polite"></div>
         <div class="database-status" id="databaseStatus" role="status" aria-live="polite"></div>
 
+        <!-- Abas centralizadas: cada painel corresponde a uma permissão; a aba Barbeiros é exclusiva do master. -->
         <div class="dashboard-workspace">
             <div class="dashboard-tabs" role="tablist" aria-label="Funcionalidades do painel">
                 <button class="dashboard-tab" id="tabAgenda" type="button" role="tab" aria-controls="agendaPanel" aria-selected="true" data-dashboard-tab="agendaPanel"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda</button>
@@ -88,9 +93,11 @@
                 <button class="dashboard-tab" id="tabProdutos" type="button" role="tab" aria-controls="productsPanel" aria-selected="false" tabindex="-1" data-dashboard-tab="productsPanel"><i class="fas fa-box" aria-hidden="true"></i> Produtos</button>
                 <button class="dashboard-tab" id="tabBarbeiros" type="button" role="tab" aria-controls="adminSection" aria-selected="false" tabindex="-1" data-dashboard-tab="adminSection" hidden><i class="fas fa-users-cog" aria-hidden="true"></i> Barbeiros</button>
             </div>
+            <p id="noAccessMessage" class="form-help" hidden>Sua conta está aprovada, mas nenhuma área foi liberada. Solicite os acessos ao administrador master.</p>
             <div class="dashboard-panels">
             <section class="dash-card dashboard-panel" id="galleryPanel" role="tabpanel" aria-labelledby="tabFotos" tabindex="0" hidden>
                 <h2><i class="fas fa-images"></i> Fotos do Studio</h2>
+                <!-- Foto local ou link direto; limites e decodificação são conferidos em js/media.js. -->
                 <form id="galleryForm" class="dashboard-form">
                     <div class="form-group">
                         <label for="galleryImageFile">Enviar foto (até 600 KB)</label>
@@ -109,13 +116,16 @@
                 <div class="dash-list" id="dashboardGalleryList" aria-live="polite"></div>
             </section>
             <section class="dash-card admin-section dashboard-panel" id="adminSection" role="tabpanel" aria-labelledby="tabBarbeiros" tabindex="0" hidden>
-                <h2><i class="fas fa-users-cog"></i> Gerenciar Barbeiros</h2>
+                <h2><i class="fas fa-users-cog"></i> Administração master</h2>
+                <p class="form-help">Aprove a equipe e escolha quais áreas cada barbeiro pode gerenciar. Alterações entram em vigor sem precisar sair da conta.</p>
+                <button id="refreshUsersBtn" class="btn btn-secondary btn-compact" type="button">Atualizar lista</button>
                 <div class="dash-list" id="adminUsersList" aria-live="polite"></div>
             </section>
 
             <section class="dash-card dashboard-panel" id="agendaPanel" role="tabpanel" aria-labelledby="tabAgenda" tabindex="0">
                 <h2><i class="fas fa-calendar-alt"></i> Disponibilidade</h2>
                 <p class="form-help">Após combinar pelo WhatsApp, confirme o horário abaixo. Ele sairá do site e o Google Calendar abrirá para você salvar o evento.</p>
+                <!-- Disponibilidades são públicas; dados do cliente só aparecem após confirmação privada. -->
                 <form id="scheduleForm" class="dashboard-form">
                     <div class="form-group">
                         <label for="schedBarber">Barbeiro disponível</label>
@@ -139,6 +149,7 @@
 
             <section class="dash-card dashboard-panel" id="productsPanel" role="tabpanel" aria-labelledby="tabProdutos" tabindex="0" hidden>
                 <h2><i class="fas fa-box"></i> Produto Afiliado</h2>
+                <!-- Produtos são recomendações com link de afiliado, sem checkout ou pagamento no site. -->
                 <form id="productForm" class="dashboard-form">
                     <div class="form-group">
                         <label for="prodName">Nome do produto</label>
@@ -169,6 +180,7 @@
         </div>
     </main>
 
+    <!-- Entrada JavaScript: módulos nativos, sem build e sem scripts inline. -->
     <script type="module" src="dashboard.js"></script>
 </body>
 </html>

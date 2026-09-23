@@ -2,6 +2,7 @@ import { safeExternalUrl } from './utils.js';
 
 const MAX_IMAGE_SIZE = 600 * 1024;
 
+/** Converte o arquivo local em base64; o resultado ainda será validado como imagem. */
 function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -11,6 +12,7 @@ function readFileAsDataUrl(file) {
     });
 }
 
+/** Confirma que o navegador decodifica a imagem e limita a espera a quinze segundos. */
 export function validateImageLink(url) {
     return new Promise((resolve, reject) => {
         const image = new Image();
@@ -28,6 +30,7 @@ export function validateImageLink(url) {
 }
 
 // Produtos e galeria usam os mesmos limites e validam também o conteúdo do arquivo.
+/** Prioriza arquivo sobre URL e aplica os mesmos tipos, tamanho máximo e validação para todos os uploads. */
 export async function readImageInput(fileId, urlId, required = false) {
     const file = document.getElementById(fileId).files[0];
     if (file) {
@@ -44,6 +47,7 @@ export async function readImageInput(fileId, urlId, required = false) {
     return validateImageLink(normalizedUrl);
 }
 
+/** Oculta imagens quebradas e, opcionalmente, mostra orientação junto da miniatura. */
 export function bindImageErrors(container, message = '') {
     container.querySelectorAll('img').forEach(image => {
         const hide = () => {

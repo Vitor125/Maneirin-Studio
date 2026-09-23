@@ -1,5 +1,6 @@
 const WHATSAPP_PHONE = '5521980453636';
 
+/** Escapa caracteres de texto para impedir que valores do banco sejam interpretados como marcação HTML. */
 export function escapeHtml(value = '') {
     return String(value)
         .replaceAll('&', '&amp;')
@@ -9,20 +10,24 @@ export function escapeHtml(value = '') {
         .replaceAll("'", '&#039;');
 }
 
+/** Codifica a mensagem e usa o número comercial configurado do Studio. */
 export function buildWhatsappUrl(message) {
     return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
 }
 
+/** Converte a representação YYYY-MM-DD em DD/MM/YYYY para exibição. */
 export function formatDateBR(dateStr) {
     if (!dateStr) return '';
     const [year, month, day] = String(dateStr).split('-');
     return `${day}/${month}/${year}`;
 }
 
+/** Exibe apenas horas e minutos; a validação de horário é feita separadamente. */
 export function formatTime(timeStr) {
     return String(timeStr || '').slice(0, 5);
 }
 
+/** Retorna a data UTC equivalente ao horário UTC−03 do Studio; devolve null para datas impossíveis. */
 export function getScheduleStart(schedule) {
     const date = String(schedule.date || '');
     const rawTime = String(schedule.time || '');
@@ -36,6 +41,7 @@ export function getScheduleStart(schedule) {
     return local.toISOString().slice(0, 16) === `${date}T${time}` ? start : null;
 }
 
+/** Indica se um horário válido ainda não passou, usando o relógio do visitante. */
 export function isUpcomingSchedule(schedule) {
     const start = getScheduleStart(schedule);
     if (!start) return false;
@@ -43,6 +49,7 @@ export function isUpcomingSchedule(schedule) {
     return start.getTime() >= Date.now();
 }
 
+/** Ordena uma cópia da lista por instante de início e coloca registros inválidos no fim. */
 export function sortSchedulesByStart(schedules) {
     return [...schedules].sort((first, second) => {
         const firstStart = getScheduleStart(first)?.getTime() ?? Number.MAX_SAFE_INTEGER;
@@ -51,6 +58,7 @@ export function sortSchedulesByStart(schedules) {
     });
 }
 
+/** Aceita somente HTTP/HTTPS sem credenciais embutidas; retorna # para destinos inválidos. */
 export function safeExternalUrl(value) {
     try {
         const url = new URL(value);
@@ -65,10 +73,12 @@ export function safeExternalUrl(value) {
 }
 
 // Um campo "id" legado não pode substituir o identificador real do Firestore.
+/** Preserva o ID real do documento, mesmo se houver um campo id forjado nos dados. */
 export function documentData(snapshot) {
     return { ...snapshot.data(), id: snapshot.id };
 }
 
+/** Permite URLs externas válidas ou data URLs raster; rejeita scripts, SVG embutido e outros esquemas. */
 export function safeImageUrl(value) {
     if (typeof value !== 'string') return '';
     if (/^data:image\/(png|jpeg|webp|gif|avif);base64,[A-Za-z0-9+/=]+$/.test(value)) return value;
@@ -76,6 +86,7 @@ export function safeImageUrl(value) {
     return url === '#' ? '' : url;
 }
 
+/** Remove espaços externos e valida obrigatoriedade/comprimento antes de persistir um texto. */
 export function boundedText(value, label, max, required = true) {
     const text = String(value || '').trim();
     if ((required && !text) || text.length > max) {

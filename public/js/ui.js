@@ -1,5 +1,6 @@
 import { buildWhatsappUrl } from './utils.js';
 
+/** Abre/fecha a navegação móvel, atualiza acessibilidade e libera a rolagem ao voltar ao desktop. */
 function setupMobileMenu() {
     const hamburger = document.querySelector('.hamburger');
     const navLinks = document.querySelector('.nav-links');
@@ -34,6 +35,7 @@ function setupMobileMenu() {
     });
 }
 
+/** Ajusta o contraste do cabeçalho ao rolar, preservando a lateral do painel desktop. */
 function setupScrollHeader() {
     const header = document.querySelector('.header');
     if (!header) return;
@@ -50,6 +52,7 @@ function setupScrollHeader() {
     });
 }
 
+/** Revela elementos quando entram na área visível; não altera os dados exibidos. */
 export function setupAnimations() {
     const fadeElements = document.querySelectorAll('.about-text, .about-image, .product-card, .info-item, .section-desc, .disclaimer, .slot-card');
 
@@ -73,6 +76,7 @@ export function setupAnimations() {
     }
 }
 
+/** Preenche os links declarados com data-whatsapp-message e protege a nova janela. */
 function setupWhatsappLinks() {
     document.querySelectorAll('[data-whatsapp-message]').forEach(link => {
         const message = link.getAttribute('data-whatsapp-message') || 'Olá! Gostaria de entrar em contato com o Maneirin Studio.';
@@ -82,6 +86,7 @@ function setupWhatsappLinks() {
     });
 }
 
+/** Exibe instalação somente quando o navegador disponibiliza seu fluxo nativo de PWA. */
 function setupInstallAppPrompt() {
     let installPromptEvent = null;
     const button = document.createElement('button');
@@ -113,6 +118,7 @@ function setupInstallAppPrompt() {
     });
 }
 
+/** Registra o cache após o carregamento da página e mantém falhas de instalação fora do fluxo principal. */
 function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
 
@@ -123,8 +129,22 @@ function registerServiceWorker() {
     });
 }
 
+/** Inicializa comportamentos comuns e a navegação para contatos; cada página chama esta função uma vez. */
 export function initCommonUI() {
     setupMobileMenu();
+    // Aguarda o fechamento do menu móvel antes de posicionar a seção de contatos.
+    document.querySelectorAll('a[href="#contato"]').forEach(link => {
+        link.addEventListener('click', event => {
+            const contact = document.getElementById('contato');
+            if (!contact) return;
+            event.preventDefault();
+            history.replaceState(null, '', '#contato');
+            requestAnimationFrame(() => contact.scrollIntoView({
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+                block: 'start'
+            }));
+        });
+    });
     setupScrollHeader();
     setupWhatsappLinks();
     setupInstallAppPrompt();

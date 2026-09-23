@@ -1,6 +1,6 @@
 # Contexto do Projeto: Maneirin Studio
 
-Atualizado em 22/09/2026. Este é o contexto de referência da versão principal.
+Atualizado em 23/09/2026. Este é o contexto de referência da versão principal.
 
 ## Objetivo e decisões confirmadas
 
@@ -30,7 +30,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 ## Funcionalidades
 
 - Página inicial com apresentação, produtos em carrossel, contatos e seção “Nossos trabalhos”.
-- Instagram confirmado pelo usuário em 18/09/2026: **@maneirinbarbeiro**, com link direto para `https://www.instagram.com/maneirinbarbeiro/` na seção Contato.
+- Instagram confirmado pelo usuário em 18/09/2026: **@maneirinbarbeiro**, com link direto para `https://www.instagram.com/maneirinbarbeiro/` na seção Contato e ao lado de WhatsApp/Agendar no início.
 - Galeria em carrossel no espaço antes ocupado pelo placeholder ao lado de “Sobre o Studio”. No celular fica abaixo do texto. Fotos e descrições são lidas de `gallery`.
 - Fotos da galeria exibidas em formato quadrado (1:1), como solicitado em 18/09/2026, com recorte centralizado e sem distorção no computador e no celular. Os arquivos originais são preservados.
 - Painel permite adicionar fotos por arquivo ou URL e remover fotos existentes. Não importa nem duplica as fotos já armazenadas.
@@ -39,7 +39,10 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - Login e cadastro por e-mail/senha, aprovação e revogação de barbeiros pelo administrador.
 - Cadastro, listagem e remoção de produtos e horários; confirmação de horários e link de calendário.
 - Painel com menu lateral escuro e cartões claros no desktop, recuperado do histórico; visual escuro e menu superior no celular.
-- Área central organizada em abas **Agenda**, **Fotos**, **Produtos** e **Barbeiros** (somente admin), conforme pedido de 18/09/2026. Uma funcionalidade fica visível por vez; trocar de aba preserva os formulários. Agenda é a aba inicial. As setas, Home e End permitem navegação por teclado; perder permissão de admin oculta Barbeiros e retorna para Agenda quando necessário. No celular as abas se organizam em duas colunas.
+- Área central organizada em abas **Agenda**, **Fotos**, **Produtos** e **Barbeiros** (somente admin), conforme pedido de 18/09/2026. Uma funcionalidade fica visível por vez; trocar de aba preserva os formulários. Agenda é a aba inicial quando autorizada; caso contrário, abre a primeira área permitida. As setas, Home e End permitem navegação por teclado; alterações de acesso ocultam áreas indisponíveis e limpam formulários/listas. No celular as abas se organizam em duas colunas.
+- Administração master em Barbeiros: aprovação, revogação e permissões separadas para Agenda, Fotos e Produtos, aplicadas também no servidor.
+- Carrosséis de produtos e fotos contínuos, sem setas visuais, com parte do próximo item visível; arraste/toque, teclado e pausa durante interação. Respeitam preferência por movimento reduzido.
+- Contato fecha o menu móvel e rola até a seção completa de contatos.
 - PWA com manifest, ícones, instalação quando suportada, cache do conteúdo estático e página offline. Os dados dinâmicos exigem internet.
 
 ## Arquivos e arquitetura
@@ -56,8 +59,12 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/js/media.js`: validação compartilhada dos arquivos/links de imagem e tratamento de imagens indisponíveis.
 - `public/js/calendar.js`: configuração da agenda, duração e construção do link do Google Calendar.
 - `public/js/ui.js`: menu, animações, instalação e registro do service worker compartilhados. O dashboard não importa mais `script.js` nem inicializa as consultas das páginas públicas.
+- `public/js/carousel.js`: rolagem contínua, cópias apenas visuais, interação e limpeza de observadores.
+- `public/js/permissions.js`: contrato compartilhado de acesso por funcionalidade.
+- `public/js/admin.js`: cartões da equipe e gravação transacional de papel/permissões.
+- `CONFIGURACAO.md`: explicação das configurações JSON, cache e contrato de acesso.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/sw.js`: cache `maneirin-studio-v18`, rede primeiro; armazena apenas caminhos estáticos enumerados, sem parâmetros. Não intercepta dados externos nem `/__/` do Firebase. Falha ao armazenar não descarta a resposta da rede.
+- `public/sw.js`: cache `maneirin-studio-v20`, rede primeiro; armazena apenas caminhos estáticos enumerados, sem parâmetros. Não intercepta dados externos nem `/__/` do Firebase. Falha ao armazenar não descarta a resposta da rede.
 - `public/manifest.webmanifest`, `public/offline.html`, `public/icons/`: instalação e experiência offline.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
@@ -73,25 +80,25 @@ O arquivo local `.code-workspace` foi preservado, mas é ignorado pelo Git e pel
 
 ### `users/{uid}`
 
-`email`, `name`, `role`, `createdAt`. Papéis: `pending`, `barber`, `admin`. Variações históricas em maiúsculas são aceitas pelas regras e normalizadas na interface.
+`email`, `name`, `role`, `createdAt` e, após gestão pelo master, `permissions` com os booleanos `schedules`, `gallery`, `products`. Papéis: `pending`, `barber`, `admin`. Variações históricas em maiúsculas são aceitas pelas regras e normalizadas na interface.
 
-Uma conta só pode criar seu próprio perfil como `pending`, usando o e-mail presente no token autenticado, ler seu próprio perfil e alterar o próprio nome (1–120 caracteres). Apenas admin lê todos os perfis e aprova/revoga outras contas entre `pending` e `barber`; não pode editar e-mails, promover a admin ou apagar seu próprio perfil por essa interface/API cliente. Provisionamento de administrador é uma operação administrativa confiável fora do site. A aprovação/revogação é acompanhada em tempo real. Criar perfil usa transação e nunca sobrescreve uma conta existente para `pending`.
+Uma conta só pode criar seu próprio perfil como `pending`, usando o e-mail presente no token autenticado, ler seu próprio perfil e alterar o próprio nome (1–120 caracteres). Apenas admin lê todos os perfis e aprova/revoga outras contas entre `pending` e `barber`; não pode editar e-mails, promover a admin ou apagar seu próprio perfil por essa interface/API cliente. Provisionamento de administrador é uma operação administrativa confiável fora do site. A aprovação/revogação e as permissões são acompanhadas em tempo real. Admin representa o master e mantém acesso integral. Barbeiros legados sem mapa preservam as três áreas até a primeira edição; mapas existentes não podem ser removidos pelo cliente. Uma conta aprovada com todas as permissões falsas não recebe acesso a nenhuma área. Criar perfil usa transação e nunca sobrescreve uma conta existente para `pending`.
 
 ### `products/{id}`
 
-`name`, `description`, `image_url`, `affiliate_link`. Leitura pública; escrita por barbeiro/admin. Regras limitam nome a 120, descrição a 2000 e link a 4096 caracteres; exigem tipos e campos previstos.
+`name`, `description`, `image_url`, `affiliate_link`. Leitura pública; escrita por admin ou barbeiro com Produtos. Regras limitam nome a 120, descrição a 2000 e link a 4096 caracteres; exigem tipos e campos previstos.
 
 ### `gallery/{id}`
 
-`image_url`, `alt`, `created_at`. Leitura pública; escrita por barbeiro/admin. Regras limitam descrição a 160 caracteres e validam os campos/tipos e o formato do endereço da imagem.
+`image_url`, `alt`, `created_at`. Leitura pública; escrita por admin ou barbeiro com Fotos. Regras limitam descrição a 160 caracteres e validam os campos/tipos e o formato do endereço da imagem.
 
 Uploads de produto e galeria aceitam JPG, PNG, WebP, GIF e AVIF de até 600 KB, armazenados como data URL. O navegador verifica se o arquivo realmente carrega como imagem. As regras limitam a string de imagem embutida a 820000 caracteres. Esse limite deixa espaço para a expansão base64 no limite de 1 MiB por documento Firestore. Para arquivos maiores, usar uma URL HTTP/HTTPS. Links e descrições também têm limites no formulário. Não há Firebase Storage integrado para uploads.
 
 ### `schedules/{id}`
 
-`barber_name`, `date` (`YYYY-MM-DD`), `time` (`HH:mm:00`), `is_available`; após confirmação também `client_name`, `confirmed_at`, `calendar_id`. Leitura pública somente quando disponível. Reservas com nome de cliente são privadas para barbeiros/admins. Gestão compartilhada entre barbeiros autorizados, sem separação por proprietário da vaga.
+`barber_name`, `date` (`YYYY-MM-DD`), `time` (`HH:mm:00`), `is_available`; após confirmação também `client_name`, `confirmed_at`, `calendar_id`. Leitura pública somente quando disponível. Reservas com nome de cliente são privadas para admin e barbeiros com Agenda. Gestão compartilhada entre barbeiros autorizados, sem separação por proprietário da vaga.
 
-Novos horários públicos só aceitam os quatro campos de disponibilidade, sem dados de cliente. A atualização permitida é confirmar uma vaga disponível, acrescentando nome (até 120 caracteres), data de confirmação e agenda; não pode alterar data/barbeiro nem sobrescrever ou republicar a reserva. Exclusão continua permitida à equipe. As regras verificam o formato da data/hora; a validação de data civil possível e futura continua no frontend, inclusive na transação. Não há validação de conflitos entre documentos distintos ou duração de serviços no servidor.
+Novos horários públicos só aceitam os quatro campos de disponibilidade, sem dados de cliente. A atualização permitida é confirmar uma vaga disponível, acrescentando nome (até 120 caracteres), data de confirmação e agenda; não pode alterar data/barbeiro nem sobrescrever ou republicar a reserva. Exclusão exige permissão de Agenda ou papel admin. As regras verificam o formato da data/hora; a validação de data civil possível e futura continua no frontend, inclusive na transação. Não há validação de conflitos entre documentos distintos ou duração de serviços no servidor.
 
 As coleções históricas `photos` e `appointments` não são usadas nesta versão e não possuem acesso pelas regras atuais. Nenhum registro foi excluído durante a auditoria.
 
@@ -111,9 +118,9 @@ As coleções históricas `photos` e `appointments` não são usadas nesta vers�
 
 ## Validação e operação
 
-- `npm run check`: sintaxe dos oito arquivos JavaScript, integridade dos imports locais e leitura das configurações JSON.
-- `npm test`: 23 testes locais de frontend e service worker, incluindo agenda, fuso, calendário, HTML/URLs, confirmação, perfil, imagens, login, troca de sessão, revogação e falhas de cache.
-- `npm run test:rules`: 65 testes no serviço de simulação, com Firebase CLI instalado e login ativo. Não cria usuários nem reservas reais.
+- `npm run check`: sintaxe dos onze arquivos JavaScript, integridade dos imports locais e leitura das configurações JSON.
+- `npm test`: 31 testes locais de frontend e service worker, incluindo agenda, fuso, calendário, HTML/URLs, confirmação, perfil, imagens, login, troca de sessão, revogação e falhas de cache.
+- `npm run test:rules`: 101 testes no serviço de simulação, com Firebase CLI instalado e login ativo. Não cria usuários nem reservas reais.
 - `firebase deploy --only firestore:rules --project site-maneirin-studio --dry-run --non-interactive`: compilação de regras.
 - Revisão visual em 1440 px e 390 px; cadastro de foto/horário validado com Firebase simulado na máquina.
 - Publicar com `firebase deploy --only hosting,firestore:rules --project site-maneirin-studio --non-interactive`.
@@ -162,3 +169,18 @@ Antes de continuar, preserve o fluxo aprovado acima. Não reintroduza a reserva 
 - Referência técnica para validação de campos: https://firebase.google.com/docs/firestore/security/rules-fields . As conclusões desta revisão são sustentadas também pelos testes do próprio projeto; não equivalem a uma garantia de ausência de qualquer vulnerabilidade.
 
 Publicação em 22/09/2026 concluída no Firebase Hosting e nas regras Firestore, com compilação aprovada. A conferência HTTP comparou 16 arquivos publicados com a cópia local e verificou os cabeçalhos de segurança na página inicial, painel, agenda e produtos. A galeria permaneceu pública (4 registros) e os perfis continuaram bloqueados para leitura anônima (403). No navegador real, dados públicos e alternância login/cadastro carregaram sem erros de console. A revisão, os testes e este registro são versionados juntos na branch `main`; a cópia local permanece no diretório `A:\site-maneirin-studio`.
+
+## Histórico — carrosséis, administração master e comentários, 23/09/2026
+
+**Responsável: Codex (OpenAI), assistente de desenvolvimento.** Continuação autorizada pelo proprietário, a partir da revisão publicada `4fa145c`.
+
+- Substituídos os carrosséis com setas por faixas contínuas de produtos/fotos, com próximo item parcialmente visível. Cópias são apenas de apresentação, sem novos registros no banco. Adicionados arraste por mouse, toque nativo, teclado, pausas e respeito a movimento reduzido. Fotos permanecem quadradas.
+- Adicionado Instagram no início, ao lado de WhatsApp e Agendar. Corrigida a navegação Contato para fechar o menu móvel e alcançar os contatos.
+- Criada a administração master dentro da aba central Barbeiros, com seleção independente de Agenda, Fotos e Produtos, aprovação/revogação, atualização da lista e mensagens de erro. A conta master existente foi preservada; não foram criadas credenciais nem alteradas permissões reais durante testes.
+- Permissões verificadas em ações, consultas privadas, abas e regras Firestore. Alterações ao vivo invalidam respostas pendentes e limpam dados/formulários. Transação protege contra sobrescrita concorrente, inclusive escolhas salvas em perfil pendente. Nenhuma conta pode se promover ou conceder permissões a si mesma.
+- Separados os módulos de permissões, administração e carrosséis. Cache atualizado para v20 e inclui os novos módulos.
+- Documentadas funções, responsabilidades, eventos importantes, HTML, seções CSS, regras e cache. Criado CONFIGURACAO.md para explicar arquivos JSON sem inserir comentários inválidos. README atualizado.
+
+Validação: 31 testes locais e 101 testes de regras aprovados. Verificação de sintaxe/imports/configuração aprovada para 11 arquivos JavaScript. Prévia isolada com dados fictícios confirmou salvamento de permissões, exibição exclusiva de Fotos para conta restrita, painel em tela móvel, carrosséis contínuos em ambos os sentidos, fotos quadradas, Instagram e navegação Contato. Não foram criados compromissos ou usuários de teste no Firebase real.
+
+Publicação em 23/09/2026 concluída no Firebase Hosting e regras Firestore, com compilação aprovada. A conferência comparou 19 arquivos publicados com a cópia local, verificou cabeçalhos de segurança em quatro rotas e confirmou galeria pública (4 registros) e perfis bloqueados para leitura anônima (403). No site publicado, carrosséis carregaram, Instagram apareceu no início, Contato alcançou os contatos/rodapé e o painel exibiu o login. O console da página pública não registrou erros nesta verificação. Código, comentários, testes e documentação seguem juntos na branch main do GitHub e na cópia local.

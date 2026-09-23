@@ -2,8 +2,10 @@ import { collection, getDocs, query, where, onSnapshot } from "https://www.gstat
 import { db } from './js/firebase.js';
 import { escapeHtml, buildWhatsappUrl, formatDateBR, formatTime, isUpcomingSchedule, safeExternalUrl, safeImageUrl, sortSchedulesByStart, documentData } from './js/utils.js';
 import { initCommonUI, setupAnimations } from './js/ui.js';
+import { setupInfiniteCarousel } from './js/carousel.js';
 import { bindImageErrors } from './js/media.js';
 
+/** Gera o cartão público com textos escapados e links/imagens filtrados. */
 function productCardTemplate(product) {
     const name = escapeHtml(product.name);
     const description = escapeHtml(product.description || '');
@@ -24,35 +26,7 @@ function productCardTemplate(product) {
     `;
 }
 
-function setupProductCarousel(container) {
-    const track = container.querySelector('.products-carousel-track');
-    const prev = container.querySelector('[data-carousel-prev]');
-    const next = container.querySelector('[data-carousel-next]');
-
-    if (!track || !prev || !next) return;
-
-    const scrollCarousel = direction => {
-        const distance = Math.max(track.clientWidth * 0.82, 280);
-        track.scrollBy({ left: direction * distance, behavior: 'smooth' });
-    };
-
-    prev.addEventListener('click', () => scrollCarousel(-1));
-    next.addEventListener('click', () => scrollCarousel(1));
-}
-
-function setupGalleryCarousel(container) {
-    const track = container.querySelector('.gallery-track');
-    const prev = container.querySelector('[data-gallery-prev]');
-    const next = container.querySelector('[data-gallery-next]');
-    if (!track || !prev || !next) return;
-
-    const scroll = direction => {
-        track.scrollBy({ left: direction * track.clientWidth, behavior: 'smooth' });
-    };
-    prev.addEventListener('click', () => scroll(-1));
-    next.addEventListener('click', () => scroll(1));
-}
-
+/** Monta a galeria contínua e retira fotos que falham, preservando o loop após a remoção. */
 function renderGallery(photos) {
     const container = document.querySelector('[data-gallery-list]');
     if (!container) return;
@@ -63,10 +37,7 @@ function renderGallery(photos) {
     }
 
     container.innerHTML = `
-        <button class="gallery-button gallery-button-prev" type="button" data-gallery-prev aria-label="Foto anterior">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <div class="gallery-track" tabindex="0" aria-label="Fotos dos trabalhos do Studio">
+        <div class="gallery-track loop-carousel" tabindex="0" role="region" aria-label="Fotos dos trabalhos do Studio. Deslize ou use as setas do teclado.">
             ${photos.map(photo => `
                 <figure class="gallery-slide">
                     <img src="${escapeHtml(safeImageUrl(photo.image_url))}" alt="${escapeHtml(photo.alt || 'Foto do Maneirin Studio')}" loading="lazy">
@@ -74,19 +45,18 @@ function renderGallery(photos) {
                 </figure>
             `).join('')}
         </div>
-        <button class="gallery-button gallery-button-next" type="button" data-gallery-next aria-label="Próxima foto">
-            <i class="fas fa-chevron-right"></i>
-        </button>
     `;
-    setupGalleryCarousel(container);
+    const track = container.querySelector('.gallery-track');
+    const carousel = setupInfiniteCarousel(track);
     const updateControls = () => {
         const count = container.querySelectorAll('.gallery-slide').length;
-        container.querySelectorAll('.gallery-button').forEach(button => { button.hidden = count < 2; });
+
         if (!count) container.innerHTML = '<p class="empty-message">As fotos do Studio estarão disponíveis em breve.</p>';
     };
-    container.querySelectorAll('.gallery-slide img').forEach(img => {
+    container.querySelectorAll('.gallery-slide:not([data-carousel-copy]) img').forEach(img => {
         const removeBrokenPhoto = () => {
             img.closest('.gallery-slide')?.remove();
+            carousel.refresh();
             updateControls();
         };
         img.addEventListener('error', removeBrokenPhoto, { once: true });
@@ -95,6 +65,7 @@ function renderGallery(photos) {
     updateControls();
 }
 
+/** Busca fotos públicas e ordena pela data cadastrada; não altera documentos. */
 async function fetchGallery() {
     const container = document.querySelector('[data-gallery-list]');
     if (!container) return;
@@ -111,6 +82,7 @@ async function fetchGallery() {
     }
 }
 
+/** Escolhe entre carrossel na página inicial e grade na vitrine completa. */
 function renderProducts(products) {
     const container = document.querySelector('[data-products-list]');
     if (!container) return;
@@ -122,17 +94,11 @@ function renderProducts(products) {
 
     if (container.dataset.productsMode === 'carousel') {
         container.innerHTML = `
-            <button class="carousel-button carousel-button-prev" type="button" data-carousel-prev aria-label="Produto anterior">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <div class="products-carousel-track" tabindex="0">
+            <div class="products-carousel-track loop-carousel" tabindex="0" role="region" aria-label="Produtos recomendados. Deslize ou use as setas do teclado.">
                 ${products.map(productCardTemplate).join('')}
             </div>
-            <button class="carousel-button carousel-button-next" type="button" data-carousel-next aria-label="Próximo produto">
-                <i class="fas fa-chevron-right"></i>
-            </button>
         `;
-        setupProductCarousel(container);
+        setupInfiniteCarousel(container.querySelector('.products-carousel-track'));
     } else {
         container.innerHTML = products.map(productCardTemplate).join('');
     }
@@ -141,6 +107,7 @@ function renderProducts(products) {
     setupAnimations();
 }
 
+/** Carrega recomendações públicas e apresenta uma mensagem recuperável quando a consulta falha. */
 async function fetchProducts() {
     const container = document.querySelector('[data-products-list]');
     if (!container) return;
@@ -155,6 +122,7 @@ async function fetchProducts() {
     }
 }
 
+/** Agrupa horários por dia e monta links de WhatsApp; o clique não confirma nem bloqueia a vaga. */
 function renderSchedules(schedules) {
     const list = document.getElementById('agendaList');
     if (!list) return;
@@ -199,6 +167,7 @@ function renderSchedules(schedules) {
     setupAnimations();
 }
 
+/** Acompanha apenas disponibilidades públicas e remove horários expirados da tela a cada minuto. */
 async function fetchSchedules() {
     const list = document.getElementById('agendaList');
     if (!list) return;
