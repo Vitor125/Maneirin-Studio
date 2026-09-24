@@ -1,7 +1,7 @@
 // Configuração exclusiva do aplicativo barbeiro; o motor comum não mistura seus caches.
 self.APP_CONFIG = {
   "prefix": "maneirin-barbeiro-",
-  "version": "v3",
+  "version": "v4",
   "scope": "/barbeiro/",
   "offline": "/barbeiro/offline.html",
   "shell": [

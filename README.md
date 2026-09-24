@@ -1,6 +1,6 @@
 # Maneirin Studio
 
-Dois aplicativos web instaláveis: **Maneirin Cliente** em `/cliente/` e **Maneirin Barbeiro** em `/barbeiro/`. HTML, CSS e módulos JavaScript nativos, com Firebase Authentication, Firestore e Hosting. Não há servidor próprio nem etapa de build.
+Dois aplicativos web instaláveis: **Maneirin Studio** em `/cliente/` e **Maneirin Studio Barbeiro** em `/barbeiro/`. HTML, CSS e módulos JavaScript nativos, com Firebase Authentication, Firestore e Hosting. Não há servidor próprio nem etapa de build.
 
 As decisões funcionais, o histórico e os limites atuais estão em [CONTEXT.md](CONTEXT.md). Leia esse arquivo antes de alterar o fluxo de reserva.
 

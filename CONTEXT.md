@@ -64,7 +64,7 @@ A decisão atual substitui o cancelamento antigo da galeria. Não foi recuperada
 - `public/js/admin.js`: cartões da equipe e gravação transacional de papel/permissões.
 - `CONFIGURACAO.md`: explicação das configurações JSON, cache e contrato de acesso.
 - `public/styles.css`: estilos comuns, responsividade e layout do painel.
-- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v5; Barbeiro v3), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
+- `public/cliente/sw.js` e `public/barbeiro/sw.js`: caches separados (Cliente v6; Barbeiro v4), arquivos e escopos de cada aplicativo. `public/js/sw-runtime.js`: motor comum, rede primeiro, sem dados externos ou autenticação no cache. `public/sw.js`: migração do worker único legado.
 - Cada pasta de aplicativo tem `manifest.webmanifest`, `offline.html` e `icons/`. O manifest da raiz preserva a identidade antiga como Cliente; os antigos ícones continuam disponíveis para compatibilidade.
 - `public/Fotos/`: logo e quatro fotos locais preservadas do projeto anterior.
 - `firebase.json`, `.firebaserc`: Hosting e Firestore do projeto `site-maneirin-studio`.
@@ -231,3 +231,7 @@ Verificação de sintaxe/imports dos 14 arquivos JavaScript e configurações ap
 ## Histórico — documentação e sincronização autorizada, 23/09/2026
 
 **Responsável: Codex (OpenAI).** Proprietário autorizou explicitamente atualizar a máquina e comitar todas as alterações no GitHub. Revisados os comentários dos módulos, regras, páginas, estilos e testes. Completadas as explicações das pistas de navegação, arraste, teclado e limpeza do carrossel. README, configuração e resumo atual do contexto agora descrevem itens únicos e cache Cliente v5; JSON é explicado em CONFIGURACAO.md para preservar sua validade. Os registros históricos anteriores permanecem como histórico. Cópia local em A:\site-maneirin-studio. Validação: 14 arquivos JavaScript/configurações e 38 testes locais aprovados; regras Firestore não alteradas nesta revisão.
+
+## Histórico — nomes e logo dos aplicativos, 23/09/2026
+
+**Responsável: Codex (OpenAI).** Os aplicativos passam a se chamar Maneirin Studio e Maneirin Studio Barbeiro (name e short_name), mantendo identidades e escopos independentes. Ícones C/B substituídos pelas versões existentes da logo original, sem alterar a arte. Atualizados títulos, páginas offline e entradas legadas. Ícones usam purpose any para preservar a logo sem promessa de recorte maskable. Caches Cliente v6 e Barbeiro v4. Instalações existentes podem demorar para refletir nome/ícone conforme o navegador; reinstalação pode ser necessária.

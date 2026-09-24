@@ -1,7 +1,7 @@
 {
   "id": "/barbeiro/",
-  "name": "Maneirin Barbeiro",
-  "short_name": "Barbeiro",
+  "name": "Maneirin Studio Barbeiro",
+  "short_name": "Maneirin Studio Barbeiro",
   "description": "Aplicativo da equipe: agenda, fotos, produtos e administração de acessos.",
   "start_url": "/barbeiro/",
   "scope": "/barbeiro/",
@@ -19,13 +19,13 @@
       "src": "/barbeiro/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/barbeiro/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "shortcuts": []

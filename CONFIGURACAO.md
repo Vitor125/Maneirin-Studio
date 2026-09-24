@@ -32,9 +32,9 @@ O painel acompanha o próprio perfil em tempo real. Alterações de acesso limpa
 
 ## PWA e cache
 
-`public/cliente/manifest.webmanifest` e `public/barbeiro/manifest.webmanifest` definem identidades separadas (`id`, nomes, descrição e idioma), abertura (`start_url`, `scope`, `display`, `orientation`), cores, categorias, ícones e atalhos públicos apenas no Cliente. O manifest da raiz é uma cópia de compatibilidade do Cliente; o ID `/` é preservado para instalações existentes. Os ícones informam tamanho, tipo e uso adaptável (`maskable`).
+`public/cliente/manifest.webmanifest` e `public/barbeiro/manifest.webmanifest` definem identidades separadas (`id`, nomes, descrição e idioma), abertura (`start_url`, `scope`, `display`, `orientation`), cores, categorias, ícones e atalhos públicos apenas no Cliente. O manifest da raiz é uma cópia de compatibilidade do Cliente; o ID `/` é preservado para instalações existentes. Os dois aplicativos usam a logo original da barbearia em PNG, nos tamanhos 192 e 512, com purpose `any` para não declarar uma área de recorte adaptável que a arte não possui.
 
-`public/cliente/sw.js` e `public/barbeiro/sw.js` usam caches próprios (`maneirin-cliente-v5` e `maneirin-barbeiro-v3`) e fornecem escopo, fallback e lista de arquivos ao motor `public/js/sw-runtime.js`. Cada atualização limpa apenas versões do próprio aplicativo. Dados Firestore e autenticação não são armazenados no cache. Novos módulos devem entrar na lista do aplicativo correto; alterações no motor comum exigem incrementar ambas as versões. O worker antigo `/sw.js` apenas remove caches legados e se desregistra. O registro da interface também retira o worker antigo de escopo raiz, sem interferir nos outros.
+`public/cliente/sw.js` e `public/barbeiro/sw.js` usam caches próprios (`maneirin-cliente-v6` e `maneirin-barbeiro-v4`) e fornecem escopo, fallback e lista de arquivos ao motor `public/js/sw-runtime.js`. Cada atualização limpa apenas versões do próprio aplicativo. Dados Firestore e autenticação não são armazenados no cache. Novos módulos devem entrar na lista do aplicativo correto; alterações no motor comum exigem incrementar ambas as versões. O worker antigo `/sw.js` apenas remove caches legados e se desregistra. O registro da interface também retira o worker antigo de escopo raiz, sem interferir nos outros.
 
 ## Verificações e manutenção
 
