@@ -235,3 +235,9 @@ Verificação de sintaxe/imports dos 14 arquivos JavaScript e configurações ap
 ## Histórico — nomes e logo dos aplicativos, 23/09/2026
 
 **Responsável: Codex (OpenAI).** Os aplicativos passam a se chamar Maneirin Studio e Maneirin Studio Barbeiro (name e short_name), mantendo identidades e escopos independentes. Ícones C/B substituídos pelas versões existentes da logo original, sem alterar a arte. Atualizados títulos, páginas offline e entradas legadas. Ícones usam purpose any para preservar a logo sem promessa de recorte maskable. Caches Cliente v6 e Barbeiro v4. Instalações existentes podem demorar para refletir nome/ícone conforme o navegador; reinstalação pode ser necessária.
+
+## Histórico — verificação do Google Search Console, 23/09/2026
+
+**Responsável: Codex (OpenAI).** Arquivo fornecido pelo proprietário copiado sem alterar o conteúdo para public/google56bf1a4471f0518f.html. O sufixo local '(1)' foi removido do nome publicado para corresponder ao identificador dentro do arquivo. A rota fica na raiz do Hosting, fora dos redirecionamentos dos aplicativos. Este é o método de arquivo HTML para propriedade de prefixo de URL; não cria registro DNS nem confirma automaticamente a propriedade no Search Console. Manter o arquivo após a verificação.
+
+Adicionada também a meta tag de verificação enviada pelo proprietário no head da página inicial Cliente (destino do redirecionamento da raiz) e na entrada legada. Arquivo e meta tag são preservados juntos; a confirmação final deve ser feita no Search Console.
