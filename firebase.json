@@ -25,6 +25,14 @@
     ],
     "headers": [
       {
+        "source": "/barbeiro/**",
+        "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+      },
+      {
+        "source": "**/offline.html",
+        "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+      },
+      {
         "source": "**",
         "headers": [
           {
